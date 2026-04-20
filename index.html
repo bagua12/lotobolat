@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LOTOBOLAT - Gestión Cloud</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        :root { --primary: #2c3e50; --accent: #27ae60; }
+        body { background-color: #f1f2f6; font-family: 'Segoe UI', sans-serif; }
+        .navbar { background: var(--primary) !important; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .card-header { background: white; border-bottom: 2px solid #eee; fw-bold; }
+        .stock-badge { font-size: 1rem; border-radius: 8px; }
+    </style>
+</head>
+<body>
+
+<nav class="navbar navbar-dark mb-4">
+    <div class="container">
+        <span class="navbar-brand fw-bold fs-3">🍀 LOTOBOLAT</span>
+        <button onclick="exportarReporte()" class="btn btn-light btn-sm fw-bold text-success">
+            <i class="bi bi-file-earmark-excel"></i> Reporte Excel
+        </button>
+    </div>
+</nav>
+
+<div class="container">
+    <div class="row">
+        <div class="col-lg-4 mb-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h5 class="fw-bold mb-3">Nuevo Producto</h5>
+                    <input type="text" id="nombre" class="form-control mb-2" placeholder="Nombre del Producto">
+                    <input type="text" id="articulo" class="form-control mb-2" placeholder="Tipo de Artículo">
+                    <input type="number" id="stock_inicial" class="form-control mb-2" placeholder="Stock Inicial">
+                    <input type="number" id="precio" class="form-control mb-3" placeholder="Precio de Venta">
+                    <button onclick="crearProducto()" class="btn btn-primary w-100 fw-bold">Agregar a Inventario</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center py-3">
+                    <h5 class="mb-0 fw-bold">Control de Stock en Tiempo Real</h5>
+                    <span class="badge bg-success" id="totalCaja">Caja Hoy: $0.00</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="bg-light">
+                            <tr>
+                                <th>Producto/Articulo</th>
+                                <th class="text-center">S. Inicial</th>
+                                <th class="text-center">Vendidos</th>
+                                <th class="text-center">S. Final</th>
+                                <th class="text-end pe-4">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaCuerpo"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const SB_URL = 'https://sycmikcciovhghzfgmrd.supabase.co'; 
+    const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN5Y21pa2NjaW92aGdoemZnbXJkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2OTk2OTcsImV4cCI6MjA5MjI3NTY5N30.QLWx_ACAqXcO9IWOfD4jCKDFPpZ0srkjIdXpQYFnY2M';
+    const supabaseClient = supabase.createClient(SB_URL, SB_KEY);
+
+    let productosGlobal = [];
+
+    async function fetchData() {
+        const { data: prods } = await supabaseClient.from('productos').select('*');
+        const { data: vtas } = await supabaseClient.from('ventas_diarias').select('*');
+
+        const tbody = document.getElementById('tablaCuerpo');
+        let cajaHoy = 0;
+        productosGlobal = [];
+
+        tbody.innerHTML = prods.map(p => {
+            const ventasProd = vtas.filter(v => v.producto_id === p.id);
+            const cantidadVendida = ventasProd.reduce((acc, curr) => acc + curr.cantidad, 0);
+            const stockFinal = p.stock_inicial - cantidadVendida;
+            const subtotalVenta = ventasProd.reduce((acc, curr) => acc + curr.monto_total, 0);
+            
+            cajaHoy += subtotalVenta;
+
+            // Guardamos para el Excel
+            productosGlobal.push({
+                Nombre: p.nombre,
+                Articulo: p.articulo,
+                Stock_Inicial: p.stock_inicial,
+                Vendidos: cantidadVendida,
+                Stock_Final: stockFinal,
+                Venta_Total: subtotalVenta
+            });
+
+            return `
+                <tr>
+                    <td>
+                        <div class="fw-bold">${p.nombre}</div>
+                        <small class="text-muted">${p.articulo}</small>
+                    </td>
+                    <td class="text-center">${p.stock_inicial}</td>
+                    <td class="text-center text-primary fw-bold">${cantidadVendida}</td>
+                    <td class="text-center">
+                        <span class="badge ${stockFinal <= 5 ? 'bg-danger' : 'bg-dark'} stock-badge">${stockFinal}</span>
+                    </td>
+                    <td class="text-end pe-4">
+                        <button class="btn btn-sm btn-success" onclick="vender('${p.id}', ${p.precio_venta})">
+                            <i class="bi bi-cart-plus"></i> Vender
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+
+        document.getElementById('totalCaja').innerText = `Caja Hoy: $${cajaHoy.toFixed(2)}`;
+    }
+
+    async function crearProducto() {
+        const nombre = document.getElementById('nombre').value;
+        const articulo = document.getElementById('articulo').value;
+        const stock = parseInt(document.getElementById('stock_inicial').value);
+        const precio = parseFloat(document.getElementById('precio').value);
+
+        await supabaseClient.from('productos').insert([{ 
+            nombre, articulo, stock_inicial: stock, precio_venta: precio 
+        }]);
+        fetchData();
+    }
+
+    async function vender(id, precio) {
+        await supabaseClient.from('ventas_diarias').insert([{ 
+            producto_id: id, cantidad: 1, monto_total: precio 
+        }]);
+        fetchData();
+    }
+
+    function exportarReporte() {
+        const ws = XLSX.utils.json_to_sheet(productosGlobal);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Cierre de Caja");
+        XLSX.writeFile(wb, `LOTOBOLAT_Reporte_${new Date().toLocaleDateString()}.xlsx`);
+    }
+
+    fetchData();
+</script>
+</body>
+</html>
