@@ -2,26 +2,24 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LOTOBOLAT - Ventas Directas</title>
+    <title>LOTOBOLAT PRO - Sistema de Ventas</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
-        body { background: #f4f6f9; font-family: sans-serif; }
+        body { background: #f4f6f9; }
         .navbar { background: #1e3799 !important; }
-        .card { border-radius: 15px; border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-        .input-cantidad { width: 70px; text-align: center; border: 2px solid #dee2e6; }
-        .stock-val { font-size: 1.5rem; font-weight: bold; color: #0d6efd; }
+        .stock-val { font-size: 1.6rem; font-weight: bold; color: #0d6efd; }
+        .input-cantidad { width: 80px; text-align: center; border: 2px solid #ced4da; }
+        .card { border-radius: 15px; border: none; }
     </style>
 </head>
 <body>
 
 <nav class="navbar navbar-dark p-3 mb-4">
-    <div class="container d-flex justify-content-between">
+    <div class="container d-flex justify-content-between align-items-center">
         <span class="navbar-brand fw-bold fs-3">🍀 LOTOBOLAT</span>
         <select id="filtroTienda" class="form-select w-auto fw-bold">
-            <option value="" disabled selected>Seleccione Tienda</option>
+            <option value="" selected disabled>Seleccione Tienda</option>
             <option value="RED AT BRISAS">🏪 RED AT BRISAS</option>
             <option value="RED AT OREBRERO">🏪 RED AT OREBRERO</option>
         </select>
@@ -29,131 +27,116 @@
 </nav>
 
 <div class="container">
-    <div class="card p-4">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h4 class="fw-bold m-0">Panel de Control</h4>
-            <button id="btnExcel" class="btn btn-success d-none" onclick="exportarExcel()">📥 Reporte Excel</button>
+    <div class="card p-4 shadow-sm">
+        <div id="loading" class="text-center d-none py-4">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="mt-2">Buscando productos en la base de datos...</p>
         </div>
-
-        <div class="table-responsive">
-            <table class="table table-hover align-middle">
-                <thead class="table-light">
-                    <tr>
-                        <th>Producto</th>
-                        <th class="text-center">Stock</th>
-                        <th class="text-center">Vendidos Hoy</th>
-                        <th class="text-end">Ingresar Venta</th>
-                    </tr>
-                </thead>
-                <tbody id="tablaCuerpo">
-                    <tr>
-                        <td colspan="4" class="text-center py-5">Seleccione una tienda arriba para cargar los productos.</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+        <table class="table table-hover align-middle" id="tablaVentas">
+            <thead class="table-light">
+                <tr>
+                    <th>Producto</th>
+                    <th class="text-center">Stock</th>
+                    <th class="text-center">Ventas Hoy</th>
+                    <th class="text-end">Vender</th>
+                </tr>
+            </thead>
+            <tbody id="tablaCuerpo">
+                <tr><td colspan="4" class="text-center py-5 text-muted">Seleccione una tienda en la parte superior.</td></tr>
+            </tbody>
+        </table>
     </div>
 </div>
 
 <script>
-    // --- IMPORTANTE: COLOCA TUS DATOS AQUÍ ---
+    // --- CONFIGURACIÓN (Pon tus datos aquí) ---
     const SB_URL = 'https://sycmikcciovhghzfgmrd.supabase.co'; 
     const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN5Y21pa2NjaW92aGdoemZnbXJkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2OTk2OTcsImV4cCI6MjA5MjI3NTY5N30.QLWx_ACAqXcO9IWOfD4jCKDFPpZ0srkjIdXpQYFnY2M';
     const supabaseClient = supabase.createClient(SB_URL, SB_KEY);
 
-    let datosParaExcel = [];
-    let tiendaAnterior = "";
+    let tiendaSeleccionada = "";
 
-    // Seguridad al cambiar de tienda
     document.getElementById('filtroTienda').addEventListener('change', async function() {
         const tienda = this.value;
-        const passwords = { 'RED AT BRISAS': 'brisas2024', 'RED AT OREBRERO': 'orebrero2024' };
-        const clave = prompt(`Clave para ${tienda}:`);
-
-        if (clave === passwords[tienda]) {
-            tiendaAnterior = tienda;
-            document.getElementById('btnExcel').classList.remove('d-none');
-            await cargarDatos(tienda);
+        const pass = prompt(`Clave para ${tienda}:`);
+        
+        if (pass === 'brisas2024' || pass === 'orebrero2024') {
+            tiendaSeleccionada = tienda;
+            await cargarInventario();
         } else {
             alert("Clave incorrecta");
-            this.value = tiendaAnterior;
+            this.value = "";
         }
     });
 
-    async function cargarDatos(tienda) {
+    async function cargarInventario() {
         const tbody = document.getElementById('tablaCuerpo');
-        tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4">Cargando...</td></tr>';
+        const loader = document.getElementById('loading');
+        
+        tbody.innerHTML = '';
+        loader.classList.remove('d-none');
 
         try {
-            // Obtener productos
-            const { data: prods } = await supabaseClient.from('productos').select('*').eq('tienda', tienda).order('nombre');
-            // Obtener ventas de hoy
-            const hoy = new Date().toISOString().split('T')[0];
-            const { data: vtas } = await supabaseClient.from('ventas_diarias').select('*').gte('fecha', hoy);
+            // Traer TODO de la tabla productos
+            const { data: prods, error: pErr } = await supabaseClient
+                .from('productos')
+                .select('*');
 
-            tbody.innerHTML = '';
-            datosParaExcel = [];
+            if (pErr) throw pErr;
 
-            if (!prods || prods.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" class="text-center">No hay productos en esta tienda. Regístralos en Supabase primero.</td></tr>';
-                return;
-            }
+            // Filtrar manualmente por tienda para evitar errores de mayúsculas o espacios
+            const filtrados = prods.filter(p => p.tienda.trim() === tiendaSeleccionada.trim());
 
-            prods.forEach(p => {
-                const ventasHoy = vtas ? vtas.filter(v => v.producto_id === p.id) : [];
-                const cantVendida = ventasHoy.reduce((acc, v) => acc + (v.cantidad || 1), 0);
-                
-                datosParaExcel.push({
-                    Producto: p.nombre, Tienda: p.tienda, Stock: p.stock_inicial, Vendidos: cantVendida
+            if (filtrados.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="text-center text-danger py-4">No se encontraron productos para "${tiendaSeleccionada}" en la base de datos.</td></tr>`;
+            } else {
+                // Traer ventas de hoy
+                const hoy = new Date().toISOString().split('T')[0];
+                const { data: vtas } = await supabaseClient.from('ventas_diarias').select('*').gte('fecha', hoy);
+
+                filtrados.forEach(p => {
+                    const cantVendida = vtas ? vtas.filter(v => v.producto_id === p.id).reduce((acc, v) => acc + (v.cantidad || 0), 0) : 0;
+                    
+                    tbody.innerHTML += `
+                        <tr>
+                            <td class="fw-bold fs-5">${p.nombre}</td>
+                            <td class="text-center"><span class="stock-val">${p.stock_inicial}</span></td>
+                            <td class="text-center text-muted fs-5">${cantVendida}</td>
+                            <td class="text-end">
+                                <div class="d-flex justify-content-end gap-2">
+                                    <input type="number" id="cant_${p.id}" class="form-control input-cantidad" value="1" min="1">
+                                    <button class="btn btn-danger fw-bold" onclick="ejecutarVenta('${p.id}', ${p.stock_inicial}, ${p.precio_venta})">VENDER</button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
                 });
-
-                tbody.innerHTML += `
-                    <tr>
-                        <td class="fw-bold fs-5 text-uppercase">${p.nombre}</td>
-                        <td class="text-center"><span class="stock-val">${p.stock_inicial}</span></td>
-                        <td class="text-center fs-5 text-muted">${cantVendida}</td>
-                        <td class="text-end">
-                            <div class="d-flex justify-content-end gap-2">
-                                <input type="number" id="cant_${p.id}" class="form-control input-cantidad" value="1" min="1">
-                                <button class="btn btn-danger fw-bold" onclick="procesarVenta('${p.id}', ${p.stock_inicial}, ${p.precio_venta}, '${p.tienda}')">
-                                    VENDER
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                `;
-            });
-        } catch (e) {
-            tbody.innerHTML = '<tr><td colspan="4" class="text-center text-danger">Error de conexión.</td></tr>';
+            }
+        } catch (err) {
+            alert("Error de conexión: " + err.message);
+        } finally {
+            loader.classList.add('d-none');
         }
     }
 
-    async function procesarVenta(id, stockActual, precio, tienda) {
+    async function ejecutarVenta(id, stockActual, precio) {
         const input = document.getElementById(`cant_${id}`);
         const cantidad = parseInt(input.value);
 
-        if (isNaN(cantidad) || cantidad <= 0) return alert("Cantidad inválida");
-        if (cantidad > stockActual) return alert("No hay stock suficiente");
+        if (isNaN(cantidad) || cantidad <= 0 || cantidad > stockActual) {
+            return alert("Cantidad no válida o stock insuficiente");
+        }
 
-        // 1. Registrar Venta
         const { error } = await supabaseClient.from('ventas_diarias').insert([
             { producto_id: id, cantidad: cantidad, monto_total: (precio * cantidad) }
         ]);
 
         if (!error) {
-            // 2. Descontar Stock
             await supabaseClient.from('productos').update({ stock_inicial: stockActual - cantidad }).eq('id', id);
-            await cargarDatos(tienda);
+            await cargarInventario();
         } else {
-            alert("Error al registrar: " + error.message);
+            alert("Error al registrar venta");
         }
-    }
-
-    function exportarExcel() {
-        const ws = XLSX.utils.json_to_sheet(datosParaExcel);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Inventario");
-        XLSX.writeFile(wb, `Reporte_Lotobolat.xlsx`);
     }
 </script>
 </body>
