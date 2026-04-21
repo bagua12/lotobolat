@@ -3,22 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LOTOBOLAT PRO - Ventas por Cantidad</title>
+    <title>LOTOBOLAT - Ventas Directas</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
-        body { background: #f1f2f6; font-family: 'Segoe UI', sans-serif; }
-        .navbar { background: #1e3799; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-        .card { border: none; border-radius: 15px; }
-        .stock-number { font-size: 1.8rem; font-weight: bold; color: #0984e3; }
-        .input-cantidad { width: 80px !important; text-align: center; font-weight: bold; }
+        body { background: #f4f6f9; font-family: sans-serif; }
+        .navbar { background: #1e3799 !important; }
+        .card { border-radius: 15px; border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .input-cantidad { width: 70px; text-align: center; border: 2px solid #dee2e6; }
+        .stock-val { font-size: 1.5rem; font-weight: bold; color: #0d6efd; }
     </style>
 </head>
 <body>
 
 <nav class="navbar navbar-dark p-3 mb-4">
-    <div class="container d-flex justify-content-between align-items-center">
+    <div class="container d-flex justify-content-between">
         <span class="navbar-brand fw-bold fs-3">🍀 LOTOBOLAT</span>
         <select id="filtroTienda" class="form-select w-auto fw-bold">
             <option value="" disabled selected>Seleccione Tienda</option>
@@ -29,42 +29,34 @@
 </nav>
 
 <div class="container">
-    <div class="row justify-content-center">
-        <div class="col-md-10">
-            <div class="card shadow-sm p-4">
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h4 class="fw-bold mb-0 text-secondary">Control de Inventario</h4>
-                    <button id="btnExcel" class="btn btn-success fw-bold d-none" onclick="exportarExcel()">
-                        📊 Descargar Reporte Hoy
-                    </button>
-                </div>
-                
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle">
-                        <thead class="table-light">
-                            <tr class="text-muted small text-uppercase">
-                                <th>Producto</th>
-                                <th class="text-center">Stock Disponible</th>
-                                <th class="text-center">Ventas Hoy</th>
-                                <th class="text-end pe-4">Cantidad a Vender</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tablaCuerpo">
-                            <tr>
-                                <td colspan="4" class="text-center py-5 text-muted">
-                                    Por favor, seleccione una tienda para ingresar.
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+    <div class="card p-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h4 class="fw-bold m-0">Panel de Control</h4>
+            <button id="btnExcel" class="btn btn-success d-none" onclick="exportarExcel()">📥 Reporte Excel</button>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Producto</th>
+                        <th class="text-center">Stock</th>
+                        <th class="text-center">Vendidos Hoy</th>
+                        <th class="text-end">Ingresar Venta</th>
+                    </tr>
+                </thead>
+                <tbody id="tablaCuerpo">
+                    <tr>
+                        <td colspan="4" class="text-center py-5">Seleccione una tienda arriba para cargar los productos.</td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
 
 <script>
-    // --- CONFIGURACIÓN SUPABASE (Coloca tus claves aquí) ---
+    // --- IMPORTANTE: COLOCA TUS DATOS AQUÍ ---
     const SB_URL = 'https://sycmikcciovhghzfgmrd.supabase.co'; 
     const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN5Y21pa2NjaW92aGdoemZnbXJkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2OTk2OTcsImV4cCI6MjA5MjI3NTY5N30.QLWx_ACAqXcO9IWOfD4jCKDFPpZ0srkjIdXpQYFnY2M';
     const supabaseClient = supabase.createClient(SB_URL, SB_KEY);
@@ -72,55 +64,58 @@
     let datosParaExcel = [];
     let tiendaAnterior = "";
 
+    // Seguridad al cambiar de tienda
     document.getElementById('filtroTienda').addEventListener('change', async function() {
-        const tiendaSeleccionada = this.value;
+        const tienda = this.value;
         const passwords = { 'RED AT BRISAS': 'brisas2024', 'RED AT OREBRERO': 'orebrero2024' };
-        const clave = prompt(`Seguridad LOTOBOLAT: Ingrese clave para ${tiendaSeleccionada}`);
+        const clave = prompt(`Clave para ${tienda}:`);
 
-        if (clave === passwords[tiendaSeleccionada]) {
-            tiendaAnterior = tiendaSeleccionada;
+        if (clave === passwords[tienda]) {
+            tiendaAnterior = tienda;
             document.getElementById('btnExcel').classList.remove('d-none');
-            await cargarInventario(tiendaSeleccionada);
+            await cargarDatos(tienda);
         } else {
-            alert("❌ Contraseña incorrecta.");
+            alert("Clave incorrecta");
             this.value = tiendaAnterior;
         }
     });
 
-    async function cargarInventario(tiendaActual) {
-        if (!tiendaActual) return;
+    async function cargarDatos(tienda) {
         const tbody = document.getElementById('tablaCuerpo');
-        tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4">Cargando datos...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4">Cargando...</td></tr>';
 
         try {
-            const { data: prods } = await supabaseClient.from('productos').select('*').eq('tienda', tiendaActual).order('nombre');
+            // Obtener productos
+            const { data: prods } = await supabaseClient.from('productos').select('*').eq('tienda', tienda).order('nombre');
+            // Obtener ventas de hoy
             const hoy = new Date().toISOString().split('T')[0];
             const { data: vtas } = await supabaseClient.from('ventas_diarias').select('*').gte('fecha', hoy);
 
             tbody.innerHTML = '';
             datosParaExcel = [];
 
+            if (!prods || prods.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center">No hay productos en esta tienda. Regístralos en Supabase primero.</td></tr>';
+                return;
+            }
+
             prods.forEach(p => {
                 const ventasHoy = vtas ? vtas.filter(v => v.producto_id === p.id) : [];
-                const cantTotalVendida = ventasHoy.reduce((acc, v) => acc + (v.cantidad || 1), 0);
-                const dineroTotal = ventasHoy.reduce((acc, v) => acc + (v.monto_total || 0), 0);
-
+                const cantVendida = ventasHoy.reduce((acc, v) => acc + (v.cantidad || 1), 0);
+                
                 datosParaExcel.push({
-                    Tienda: p.tienda, Producto: p.nombre, Stock_Actual: p.stock_inicial,
-                    Vendidos_Hoy: cantTotalVendida, Recaudado: dineroTotal
+                    Producto: p.nombre, Tienda: p.tienda, Stock: p.stock_inicial, Vendidos: cantVendida
                 });
 
                 tbody.innerHTML += `
                     <tr>
-                        <td class="fw-bold fs-5">${p.nombre}</td>
-                        <td class="text-center"><span class="stock-number">${p.stock_inicial}</span></td>
-                        <td class="text-center fs-5 text-muted">${cantTotalVendida}</td>
-                        <td class="text-end pe-4">
-                            <div class="d-flex justify-content-end align-items-center gap-2">
-                                <input type="number" id="cant_${p.id}" class="form-control input-cantidad" value="1" min="1" max="${p.stock_inicial}">
-                                <button class="btn btn-danger fw-bold px-3" 
-                                        onclick="venderMultiple('${p.id}', ${p.stock_inicial}, ${p.precio_venta}, '${p.tienda}')"
-                                        ${p.stock_inicial <= 0 ? 'disabled' : ''}>
+                        <td class="fw-bold fs-5 text-uppercase">${p.nombre}</td>
+                        <td class="text-center"><span class="stock-val">${p.stock_inicial}</span></td>
+                        <td class="text-center fs-5 text-muted">${cantVendida}</td>
+                        <td class="text-end">
+                            <div class="d-flex justify-content-end gap-2">
+                                <input type="number" id="cant_${p.id}" class="form-control input-cantidad" value="1" min="1">
+                                <button class="btn btn-danger fw-bold" onclick="procesarVenta('${p.id}', ${p.stock_inicial}, ${p.precio_venta}, '${p.tienda}')">
                                     VENDER
                                 </button>
                             </div>
@@ -128,45 +123,37 @@
                     </tr>
                 `;
             });
-        } catch (err) { console.error(err); }
+        } catch (e) {
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center text-danger">Error de conexión.</td></tr>';
+        }
     }
 
-    async function venderMultiple(id, stockActual, precio, tienda) {
-        const inputCant = document.getElementById(`cant_${id}`);
-        const cantidadAVender = parseInt(inputCant.value);
+    async function procesarVenta(id, stockActual, precio, tienda) {
+        const input = document.getElementById(`cant_${id}`);
+        const cantidad = parseInt(input.value);
 
-        if (isNaN(cantidadAVender) || cantidadAVender <= 0) {
-            alert("Por favor ingrese una cantidad válida.");
-            return;
-        }
+        if (isNaN(cantidad) || cantidad <= 0) return alert("Cantidad inválida");
+        if (cantidad > stockActual) return alert("No hay stock suficiente");
 
-        if (cantidadAVender > stockActual) {
-            alert("No hay suficiente stock para esta venta.");
-            return;
-        }
+        // 1. Registrar Venta
+        const { error } = await supabaseClient.from('ventas_diarias').insert([
+            { producto_id: id, cantidad: cantidad, monto_total: (precio * cantidad) }
+        ]);
 
-        const montoVenta = precio * cantidadAVender;
-
-        // 1. Registrar la venta con la cantidad escrita
-        const { error: vError } = await supabaseClient
-            .from('ventas_diarias')
-            .insert([{ producto_id: id, cantidad: cantidadAVender, monto_total: montoVenta }]);
-
-        if (!vError) {
-            // 2. Restar la cantidad exacta del stock inicial
-            const nuevoStock = stockActual - cantidadAVender;
-            await supabaseClient.from('productos').update({ stock_inicial: nuevoStock }).eq('id', id);
-            
-            await cargarInventario(tienda);
-            alert(`✅ Venta registrada: ${cantidadAVender} unidades.`);
+        if (!error) {
+            // 2. Descontar Stock
+            await supabaseClient.from('productos').update({ stock_inicial: stockActual - cantidad }).eq('id', id);
+            await cargarDatos(tienda);
+        } else {
+            alert("Error al registrar: " + error.message);
         }
     }
 
     function exportarExcel() {
         const ws = XLSX.utils.json_to_sheet(datosParaExcel);
         const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Reporte");
-        XLSX.writeFile(wb, `LOTOBOLAT_${new Date().toLocaleDateString()}.xlsx`);
+        XLSX.utils.book_append_sheet(wb, ws, "Inventario");
+        XLSX.writeFile(wb, `Reporte_Lotobolat.xlsx`);
     }
 </script>
 </body>
