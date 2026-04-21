@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LOTOBOLAT ULTRA PRO - v2.1</title>
+    <title>LOTOBOLAT ULTRA PRO - Dashboard</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -11,24 +11,22 @@
         body { background: #f0f2f5; font-family: 'Segoe UI', sans-serif; }
         .navbar { background: #1e3799 !important; box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
         .card { border-radius: 15px; border: none; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-        .stock-inicial { font-size: 0.9rem; color: #6c757d; text-decoration: line-through; }
         .stock-actual { font-size: 1.6rem; font-weight: bold; color: #0d6efd; }
-        .stock-critico { color: #dc3545 !important; animation: blinker 1.5s linear infinite; }
-        @keyframes blinker { 50% { opacity: 0.5; } }
-        .resumen-caja { border-left: 5px solid #2ecc71; background: white; }
-        .historial-item { font-size: 0.85rem; border-bottom: 1px solid #eee; padding: 10px 0; }
-        .hora-venta { color: #95a5a6; font-size: 0.75rem; display: block; }
+        .resumen-global { border-top: 5px solid #1e3799; background: #ffffff; }
+        .badge-tienda { font-size: 0.75rem; padding: 5px 10px; border-radius: 20px; }
+        .bg-brisas { background-color: #e67e22; color: white; }
+        .bg-orebrero { background-color: #9b59b6; color: white; }
     </style>
 </head>
 <body>
 
 <nav class="navbar navbar-dark p-3 mb-4">
     <div class="container d-flex justify-content-between align-items-center">
-        <span class="navbar-brand fw-bold fs-3">🍀 LOTOBOLAT</span>
+        <span class="navbar-brand fw-bold fs-3" onclick="location.reload()" style="cursor:pointer">🍀 LOTOBOLAT</span>
         <div class="d-flex gap-2 text-white">
             <span id="displayVendedor" class="badge bg-light text-dark align-self-center p-2 d-none"></span>
             <select id="filtroTienda" class="form-select w-auto fw-bold">
-                <option value="" selected disabled>Seleccionar Tienda</option>
+                <option value="" selected disabled>Entrar a Tienda...</option>
                 <option value="RED AT BRISAS">🏪 RED AT BRISAS</option>
                 <option value="RED AT OREBRERO">🏪 RED AT OREBRERO</option>
             </select>
@@ -37,43 +35,71 @@
 </nav>
 
 <div class="container">
-    <div class="row mb-4">
-        <div class="col-md-4">
-            <div class="card p-3 resumen-caja shadow-sm">
-                <p class="text-muted mb-0 small uppercase fw-bold">Recaudación de Hoy</p>
-                <h2 id="totalCaja" class="fw-bold text-success m-0">S/ 0.00</h2>
+    <div id="seccionGlobal">
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="card p-4 resumen-global shadow-sm">
+                    <p class="text-muted mb-0 small fw-bold">VENTAS TOTALES HOY (TODAS LAS TIENDAS)</p>
+                    <h1 id="totalGlobal" class="fw-bold text-primary m-0">S/ 0.00</h1>
+                </div>
+            </div>
+            <div class="col-md-8 text-end align-self-end">
+                <h5 class="fw-bold text-secondary">Resumen General de Operaciones</h5>
+                <p class="text-muted small">Ventas registradas el día de hoy en tiempo real.</p>
             </div>
         </div>
-        <div class="col-md-8 text-end align-self-center">
-            <button id="btnExcel" class="btn btn-success fw-bold px-4 d-none" onclick="exportarExcel()">
-                📊 Descargar Reporte con Fechas
-            </button>
-        </div>
-    </div>
 
-    <div class="row">
-        <div class="col-md-8">
-            <div class="card p-4 shadow-sm mb-4">
-                <table class="table table-hover align-middle">
-                    <thead class="table-light">
+        <div class="card p-4 shadow-sm">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-dark">
                         <tr>
+                            <th>Hora</th>
+                            <th>Tienda</th>
+                            <th>Vendedor</th>
                             <th>Producto</th>
-                            <th class="text-center">Stock (Ini / Hoy)</th>
-                            <th class="text-center">Ventas</th>
-                            <th class="text-end">Operación</th>
+                            <th class="text-center">Cant.</th>
+                            <th class="text-end">Total</th>
                         </tr>
                     </thead>
-                    <tbody id="tablaCuerpo">
-                        <tr><td colspan="4" class="text-center py-5">Inicie sesión seleccionando tienda.</td></tr>
+                    <tbody id="cuerpoGlobal">
+                        <tr><td colspan="6" class="text-center py-4">Cargando reporte del día...</td></tr>
                     </tbody>
                 </table>
             </div>
         </div>
+    </div>
 
-        <div class="col-md-4">
-            <div class="card p-3 shadow-sm" style="max-height: 550px; overflow-y: auto;">
-                <h6 class="fw-bold border-bottom pb-2">Ventas Recientes (Hoy)</h6>
-                <div id="listaHistorial"></div>
+    <div id="seccionVenta" class="d-none">
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="card p-3 border-start border-success border-5 shadow-sm">
+                    <p class="text-muted mb-0 small fw-bold">Caja de esta Tienda</p>
+                    <h2 id="totalCajaTienda" class="fw-bold text-success m-0">S/ 0.00</h2>
+                </div>
+            </div>
+            <div class="col-md-8 text-end align-self-center">
+                <button class="btn btn-success fw-bold" onclick="exportarExcel()">📊 Descargar Reporte Tienda</button>
+                <button class="btn btn-outline-secondary fw-bold" onclick="location.reload()">⬅ Volver al Inicio</button>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-8">
+                <div class="card p-4 shadow-sm">
+                    <table class="table align-middle">
+                        <thead class="table-light">
+                            <tr><th>Producto</th><th class="text-center">Stock</th><th class="text-center">Ventas</th><th class="text-end">Operación</th></tr>
+                        </thead>
+                        <tbody id="tablaCuerpoVenta"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card p-3 shadow-sm">
+                    <h6 class="fw-bold border-bottom pb-2">Ventas Recientes</h6>
+                    <div id="listaHistorial"></div>
+                </div>
             </div>
         </div>
     </div>
@@ -86,8 +112,53 @@
 
     let tiendaActiva = "";
     let vendedorActivo = "";
-    let listaVentasHoy = [];
+    let todasLasVentasHoy = [];
 
+    // Al cargar la página, ejecutar el reporte global
+    window.onload = cargarReporteGlobal;
+
+    async function cargarReporteGlobal() {
+        const tbody = document.getElementById('cuerpoGlobal');
+        const totalDisplay = document.getElementById('totalGlobal');
+        
+        try {
+            const hoy = new Date().toISOString().split('T')[0];
+            // Traemos ventas y unimos con el nombre del producto
+            const { data: vtas, error } = await supabaseClient
+                .from('ventas_diarias')
+                .select('*, productos(nombre, tienda)')
+                .gte('fecha', hoy)
+                .order('fecha', { ascending: false });
+
+            if (error) throw error;
+
+            tbody.innerHTML = '';
+            let sumaGlobal = 0;
+
+            if (vtas.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center py-5 text-muted">Aún no se han realizado ventas el día de hoy.</td></tr>';
+            } else {
+                vtas.forEach(v => {
+                    sumaGlobal += v.monto_total;
+                    const hora = new Date(v.fecha).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    const badgeClass = v.productos.tienda.includes('BRISAS') ? 'bg-brisas' : 'bg-orebrero';
+                    
+                    tbody.innerHTML += `
+                        <tr>
+                            <td><small class="text-muted">${hora}</small></td>
+                            <td><span class="badge badge-tienda ${badgeClass}">${v.productos.tienda}</span></td>
+                            <td><small class="fw-bold text-secondary">SISTEMA</small></td>
+                            <td class="fw-bold">${v.productos.nombre}</td>
+                            <td class="text-center">${v.cantidad}</td>
+                            <td class="text-end fw-bold">S/ ${v.monto_total.toFixed(2)}</td>
+                        </tr>`;
+                });
+            }
+            totalDisplay.textContent = `S/ ${sumaGlobal.toFixed(2)}`;
+        } catch (e) { console.error(e); }
+    }
+
+    // Lógica para cambiar a modo Tienda
     document.getElementById('filtroTienda').addEventListener('change', async function() {
         const tienda = this.value;
         const pass = prompt(`Clave para ${tienda}:`);
@@ -95,110 +166,73 @@
         if (pass === 'brisas2024' || pass === 'orebrero2024') {
             vendedorActivo = prompt("Nombre del Vendedor:") || "Vendedor";
             tiendaActiva = tienda;
+            
+            document.getElementById('seccionGlobal').classList.add('d-none');
+            document.getElementById('seccionVenta').classList.remove('d-none');
             document.getElementById('displayVendedor').textContent = `👤 ${vendedorActivo}`;
             document.getElementById('displayVendedor').classList.remove('d-none');
-            document.getElementById('btnExcel').classList.remove('d-none');
-            await cargarTodo();
+            
+            await cargarPanelTienda();
         } else {
             alert("Clave incorrecta");
             this.value = "";
         }
     });
 
-    async function cargarTodo() {
-        const tbody = document.getElementById('tablaCuerpo');
+    // --- FUNCIONES DE PANEL DE TIENDA (IGUAL QUE ANTES) ---
+    async function cargarPanelTienda() {
+        const tbody = document.getElementById('tablaCuerpoVenta');
         const histDiv = document.getElementById('listaHistorial');
-        const cajaDiv = document.getElementById('totalCaja');
+        const cajaDiv = document.getElementById('totalCajaTienda');
         
-        try {
-            const { data: prods } = await supabaseClient.from('productos').select('*').eq('tienda', tiendaActiva).order('nombre');
-            const hoy = new Date().toISOString().split('T')[0];
-            const { data: vtas } = await supabaseClient.from('ventas_diarias').select('*, productos(nombre)').gte('fecha', hoy).order('fecha', { ascending: false });
+        const { data: prods } = await supabaseClient.from('productos').select('*').eq('tienda', tiendaActiva).order('nombre');
+        const hoy = new Date().toISOString().split('T')[0];
+        const { data: vtas } = await supabaseClient.from('ventas_diarias').select('*, productos(nombre)').gte('fecha', hoy).order('fecha', { ascending: false });
 
-            listaVentasHoy = vtas || [];
-            tbody.innerHTML = '';
-            histDiv.innerHTML = '';
-            let totalRecaudado = 0;
+        tbody.innerHTML = '';
+        histDiv.innerHTML = '';
+        let totalTienda = 0;
 
-            prods.forEach(p => {
-                const misVentas = listaVentasHoy.filter(v => v.producto_id === p.id);
-                const cantVendida = misVentas.reduce((acc, v) => acc + v.cantidad, 0);
-                const dineroProd = misVentas.reduce((acc, v) => acc + v.monto_total, 0);
-                totalRecaudado += dineroProd;
+        prods.forEach(p => {
+            const misVentas = vtas.filter(v => v.producto_id === p.id);
+            const cantVendida = misVentas.reduce((acc, v) => acc + v.cantidad, 0);
+            totalTienda += misVentas.reduce((acc, v) => acc + v.monto_total, 0);
 
-                const stockQueInicio = p.stock_inicial + cantVendida;
-                const claseCritica = p.stock_inicial < 5 ? 'stock-critico' : '';
+            tbody.innerHTML += `
+                <tr>
+                    <td class="fw-bold">${p.nombre}</td>
+                    <td class="text-center"><span class="stock-actual">${p.stock_inicial}</span></td>
+                    <td class="text-center text-muted">${cantVendida}</td>
+                    <td class="text-end">
+                        <div class="d-flex justify-content-end gap-2">
+                            <input type="number" id="in_${p.id}" class="form-control" style="width:65px" value="1" min="1">
+                            <button class="btn btn-danger btn-sm" onclick="vender('${p.id}', ${p.stock_inicial}, ${p.precio_venta})">VENDER</button>
+                        </div>
+                    </td>
+                </tr>`;
+        });
 
-                tbody.innerHTML += `
-                    <tr>
-                        <td class="fw-bold">${p.nombre}</td>
-                        <td class="text-center">
-                            <span class="stock-inicial">${stockQueInicio}</span><br>
-                            <span class="stock-actual ${claseCritica}">${p.stock_inicial}</span>
-                        </td>
-                        <td class="text-center fs-5 text-muted">${cantVendida}</td>
-                        <td class="text-end">
-                            <div class="d-flex justify-content-end gap-2">
-                                <input type="number" id="in_${p.id}" class="form-control" style="width:70px" value="1" min="1">
-                                <button class="btn btn-danger btn-sm fw-bold" onclick="vender('${p.id}', ${p.stock_inicial}, ${p.precio_venta})">VENDER</button>
-                            </div>
-                        </td>
-                    </tr>`;
-            });
+        vtas.filter(v => v.productos.tienda === tiendaActiva).slice(0,8).forEach(v => {
+            histDiv.innerHTML += `<div class="historial-item d-flex justify-content-between"><span>${v.cantidad}x ${v.productos.nombre}</span> <button class="btn btn-link btn-sm text-danger" onclick="anular('${v.id}','${v.producto_id}',${v.cantidad})">X</button></div>`;
+        });
 
-            if (listaVentasHoy.length > 0) {
-                listaVentasHoy.forEach(v => {
-                    const hora = new Date(v.fecha).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                    histDiv.innerHTML += `
-                        <div class="historial-item d-flex justify-content-between align-items-center">
-                            <div>
-                                <b>${v.cantidad}x</b> ${v.productos.nombre}
-                                <span class="hora-venta">Hora: ${hora}</span>
-                            </div>
-                            <button class="btn btn-outline-danger btn-sm" style="font-size:0.7rem" onclick="deshacer('${v.id}','${v.producto_id}',${v.cantidad})">Anular</button>
-                        </div>`;
-                });
-            } else {
-                histDiv.innerHTML = '<p class="text-muted small text-center py-3">Sin ventas.</p>';
-            }
-            cajaDiv.textContent = `S/ ${totalRecaudado.toFixed(2)}`;
-        } catch (e) { console.log(e); }
+        cajaDiv.textContent = `S/ ${totalTienda.toFixed(2)}`;
     }
 
     async function vender(id, stock, precio) {
         const cant = parseInt(document.getElementById(`in_${id}`).value);
-        if (cant > stock || cant <= 0) return alert("Error en cantidad");
-        const { error } = await supabaseClient.from('ventas_diarias').insert([{ producto_id: id, cantidad: cant, monto_total: (precio * cant) }]);
-        if (!error) {
-            await supabaseClient.from('productos').update({ stock_inicial: stock - cant }).eq('id', id);
-            await cargarTodo();
-        }
+        if (cant > stock || cant <= 0) return alert("Error");
+        await supabaseClient.from('ventas_diarias').insert([{ producto_id: id, cantidad: cant, monto_total: (precio * cant) }]);
+        await supabaseClient.from('productos').update({ stock_inicial: stock - cant }).eq('id', id);
+        await cargarPanelTienda();
     }
 
-    async function deshacer(vId, pId, cant) {
-        if (!confirm("¿Anular venta?")) return;
-        const { error } = await supabaseClient.from('ventas_diarias').delete().eq('id', vId);
-        if (!error) {
-            const { data: p } = await supabaseClient.from('productos').select('stock_inicial').eq('id', pId).single();
-            await supabaseClient.from('productos').update({ stock_inicial: p.stock_inicial + cant }).eq('id', pId);
-            await cargarTodo();
-        }
-    }
-
-    function exportarExcel() {
-        const dataReporte = listaVentasHoy.map(v => ({
-            Fecha: new Date(v.fecha).toLocaleDateString(),
-            Hora: new Date(v.fecha).toLocaleTimeString(),
-            Tienda: tiendaActiva,
-            Vendedor: vendedorActivo,
-            Producto: v.productos.nombre,
-            Cantidad: v.cantidad,
-            Total_Soles: v.monto_total
-        }));
-        const ws = XLSX.utils.json_to_sheet(dataReporte);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Ventas Detalladas");
-        XLSX.writeFile(wb, `LOTOBOLAT_Cierre_${tiendaActiva}_${new Date().toLocaleDateString()}.xlsx`);
+    async function anular(vId, pId, cant) {
+        if (!confirm("¿Anular?")) return;
+        await supabaseClient.from('ventas_diarias').delete().eq('id', vId);
+        const { data: p } = await supabaseClient.from('productos').select('stock_inicial').eq('id', pId).single();
+        await supabaseClient.from('productos').update({ stock_inicial: p.stock_inicial + cant }).eq('id', pId);
+        await cargarPanelTienda();
     }
 </script>
 </body>
