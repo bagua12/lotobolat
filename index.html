@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LOTOBOLAT ULTRA PRO - v2.7</title>
+    <title>LOTOBOLAT ULTRA PRO - v2.8</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -98,49 +98,46 @@
 
     let tiendaActiva = "";
     let vendedorActivo = "";
-    let todasVtasHoy = [];
+    let vtasCache = [];
 
     document.addEventListener('DOMContentLoaded', cargarReporteGlobal);
 
     async function cargarReporteGlobal() {
         const hoy = new Date().toISOString().split('T')[0];
         const { data: vtas } = await supabaseClient.from('ventas_diarias').select('*, productos(nombre, tienda)').gte('fecha', hoy).order('fecha', { ascending: false });
-        todasVtasHoy = vtas || [];
         const tbody = document.getElementById('cuerpoGlobal');
         tbody.innerHTML = '';
         let suma = 0;
-        todasVtasHoy.forEach(v => {
-            suma += v.monto_total;
-            const h = new Date(v.fecha).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            const badge = v.productos.tienda.includes('BRISAS') ? 'bg-brisas' : 'bg-orebrero';
-            tbody.innerHTML += `<tr>
-                <td><small>${h}</small></td>
-                <td><span class="badge badge-tienda ${badge}">${v.productos.tienda}</span></td>
-                <td><small class="fw-bold">${v.vendedor || '---'}</small></td>
-                <td class="fw-bold">${v.productos.nombre}</td>
-                <td class="text-center">${v.cantidad}</td>
-                <td class="text-end fw-bold">S/ ${v.monto_total.toFixed(2)}</td>
-            </tr>`;
-        });
+        if(vtas) {
+            vtas.forEach(v => {
+                suma += v.monto_total;
+                const h = new Date(v.fecha).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                const badge = v.productos.tienda.includes('BRISAS') ? 'bg-brisas' : 'bg-orebrero';
+                tbody.innerHTML += `<tr>
+                    <td><small>${h}</small></td>
+                    <td><span class="badge badge-tienda ${badge}">${v.productos.tienda}</span></td>
+                    <td><small class="fw-bold">${v.vendedor || '---'}</small></td>
+                    <td class="fw-bold">${v.productos.nombre}</td>
+                    <td class="text-center">${v.cantidad}</td>
+                    <td class="text-end fw-bold">S/ ${v.monto_total.toFixed(2)}</td>
+                </tr>`;
+            });
+        }
         document.getElementById('totalGlobal').textContent = `S/ ${suma.toFixed(2)}`;
     }
 
     document.getElementById('filtroTienda').addEventListener('change', async function() {
-        const tienda = this.value;
-        const pass = prompt(`Clave para ${tienda}:`);
+        const t = this.value;
+        const pass = prompt(`Clave para ${t}:`);
         if (pass === 'brisas2024' || pass === 'orebrero2024') {
-            let nombre = prompt("Ingrese su nombre para registrar ventas:");
-            while (!nombre || nombre.trim() === "") {
-                nombre = prompt("ERROR: El nombre es obligatorio:");
-            }
-            vendedorActivo = nombre.trim();
-            tiendaActiva = tienda;
+            vendedorActivo = prompt("Su nombre:") || "Vendedor";
+            tiendaActiva = t;
             document.getElementById('seccionGlobal').classList.add('d-none');
             document.getElementById('seccionVenta').classList.remove('d-none');
             document.getElementById('displayVendedor').textContent = `👤 ${vendedorActivo}`;
             document.getElementById('displayVendedor').classList.remove('d-none');
             await cargarPanelTienda();
-        } else { this.value = ""; alert("Clave incorrecta"); }
+        } else { this.value = ""; }
     });
 
     async function cargarPanelTienda() {
@@ -148,36 +145,33 @@
         const hoy = new Date().toISOString().split('T')[0];
         const { data: vtas } = await supabaseClient.from('ventas_diarias').select('*, productos(nombre, tienda)').gte('fecha', hoy).order('fecha', { ascending: false });
         
-        todasVtasHoy = vtas || [];
-        const misVentas = todasVtasHoy.filter(v => v.productos.tienda === tiendaActiva);
+        vtasCache = vtas || [];
+        const misVentas = vtasCache.filter(v => v.productos.tienda === tiendaActiva);
         const tbody = document.getElementById('tablaCuerpoVenta');
         const histDiv = document.getElementById('listaHistorial');
         
-        tbody.innerHTML = '';
-        histDiv.innerHTML = '';
+        tbody.innerHTML = ''; histDiv.innerHTML = '';
         let totalT = 0;
 
         prods.forEach(p => {
-            const vProd = misVentas.filter(v => v.producto_id === p.id);
-            const cantV = vProd.reduce((acc, v) => acc + v.cantidad, 0);
-            totalT += vProd.reduce((acc, v) => acc + v.monto_total, 0);
-            const stIni = p.stock_inicial + cantV;
-
+            const vP = misVentas.filter(v => v.producto_id === p.id);
+            const cantV = vP.reduce((a, b) => a + b.cantidad, 0);
+            totalT += vP.reduce((a, b) => a + b.monto_total, 0);
             tbody.innerHTML += `<tr>
                 <td class="fw-bold">${p.nombre}</td>
-                <td class="text-center"><span class="stock-inicial-ref">${stIni}</span><span class="stock-actual">${p.stock_inicial}</span></td>
-                <td class="text-center text-muted fs-5">${cantV}</td>
+                <td class="text-center"><span class="stock-inicial-ref">${p.stock_inicial + cantV}</span><span class="stock-actual">${p.stock_inicial}</span></td>
+                <td class="text-center fs-5">${cantV}</td>
                 <td class="text-end"><div class="d-flex justify-content-end gap-2">
                     <input type="number" id="in_${p.id}" class="form-control" style="width:65px" value="1" min="1">
-                    <button class="btn btn-danger btn-sm fw-bold" onclick="vender('${p.id}', ${p.stock_inicial}, ${p.precio_venta})">VENDER</button>
+                    <button class="btn btn-danger btn-sm" onclick="vender('${p.id}', ${p.stock_inicial}, ${p.precio_venta})">VENDER</button>
                 </div></td>
             </tr>`;
         });
 
-        misVentas.slice(0,10).forEach(v => {
-            const hV = new Date(v.fecha).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            histDiv.innerHTML += `<div class="historial-item d-flex justify-content-between align-items-center">
-                <div><b>${v.cantidad}x</b> ${v.productos.nombre} <small class="text-muted">(${hV})</small></div>
+        misVentas.slice(0,8).forEach(v => {
+            const h = new Date(v.fecha).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            histDiv.innerHTML += `<div class="historial-item d-flex justify-content-between">
+                <span><b>${v.cantidad}x</b> ${v.productos.nombre} <small>(${h})</small></span>
                 <button class="btn btn-link btn-sm text-danger p-0" onclick="anular('${v.id}','${v.producto_id}',${v.cantidad})">Anular</button>
             </div>`;
         });
@@ -185,23 +179,16 @@
     }
 
     async function vender(id, stock, precio) {
-        const input = document.getElementById(`in_${id}`);
-        const cant = parseInt(input.value);
-        if (isNaN(cant) || cant <= 0) return alert("Cantidad no válida");
-        if (cant > stock) return alert("No hay suficiente stock");
-
-        try {
-            const { error } = await supabaseClient.from('ventas_diarias').insert([
-                { producto_id: id, cantidad: cant, monto_total: (precio * cant), vendedor: vendedorActivo }
-            ]);
-            if (error) throw error;
-            await supabaseClient.from('productos').update({ stock_inicial: stock - cant }).eq('id', id);
-            await cargarPanelTienda();
-        } catch (err) { alert("Error al vender: " + err.message); }
+        const c = parseInt(document.getElementById(`in_${id}`).value);
+        if (c > stock || c <= 0) return alert("Error stock");
+        const { error } = await supabaseClient.from('ventas_diarias').insert([{ producto_id: id, cantidad: c, monto_total: (precio * c), vendedor: vendedorActivo }]);
+        if (error) return alert("Asegúrate de haber creado la columna 'vendedor' en Supabase.");
+        await supabaseClient.from('productos').update({ stock_inicial: stock - c }).eq('id', id);
+        await cargarPanelTienda();
     }
 
     async function anular(vId, pId, cant) {
-        if (!confirm("¿Anular esta venta?")) return;
+        if (!confirm("¿Anular?")) return;
         await supabaseClient.from('ventas_diarias').delete().eq('id', vId);
         const { data: p } = await supabaseClient.from('productos').select('stock_inicial').eq('id', pId).single();
         await supabaseClient.from('productos').update({ stock_inicial: p.stock_inicial + cant }).eq('id', pId);
@@ -209,19 +196,19 @@
     }
 
     function descargarExcel() {
-        const reporte = todasVtasHoy.filter(v => v.productos.tienda === tiendaActiva).map(v => ({
+        const data = vtasCache.filter(v => v.productos.tienda === tiendaActiva).map(v => ({
             Fecha: new Date(v.fecha).toLocaleDateString(),
-            Hora: new Date(v.fecha).toLocaleTimeString(),
             Tienda: tiendaActiva,
             Vendedor: v.vendedor || '---',
             Producto: v.productos.nombre,
             Cantidad: v.cantidad,
-            Monto: v.monto_total
+            Total: v.monto_total
         }));
-        const ws = XLSX.utils.json_to_sheet(reporte);
+        if(data.length === 0) return alert("Sin ventas.");
+        const ws = XLSX.utils.json_to_sheet(data);
         const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Ventas");
-        XLSX.writeFile(wb, `Reporte_${tiendaActiva}.xlsx`);
+        XLSX.utils.book_append_sheet(wb, ws, "Cierre");
+        XLSX.writeFile(wb, `Cierre_${tiendaActiva}.xlsx`);
     }
 </script>
 </body>
