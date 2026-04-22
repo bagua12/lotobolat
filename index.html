@@ -3,21 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LOTOBOLAT ULTRA PRO - v2.9</title>
+    <title>LOTOBOLAT ULTRA PRO - v3.0</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         body { background: #f0f2f5; font-family: 'Segoe UI', sans-serif; }
-        .navbar { background: #1e3799 !important; box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
+        .navbar { background: #1e3799 !important; }
         .card { border-radius: 15px; border: none; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
         .stock-inicial-ref { font-size: 0.85rem; color: #6c757d; text-decoration: line-through; display: block; }
         .stock-actual { font-size: 1.5rem; font-weight: bold; color: #0d6efd; }
         .badge-tienda { font-size: 0.75rem; padding: 5px 10px; border-radius: 20px; }
         .bg-brisas { background-color: #e67e22; color: white; }
         .bg-orebrero { background-color: #9b59b6; color: white; }
-        .historial-item { font-size: 0.85rem; border-bottom: 1px solid #eee; padding: 10px 0; }
-        .text-fecha { font-size: 0.75rem; color: #6c757d; }
         .precio-tag { font-weight: bold; color: #198754; background: #e9f7ef; padding: 2px 6px; border-radius: 5px; }
     </style>
 </head>
@@ -42,12 +40,13 @@
         <div class="row mb-4">
             <div class="col-md-4">
                 <div class="card p-4 shadow-sm border-top border-primary border-5">
-                    <p class="text-muted mb-0 small fw-bold">TOTAL VENTAS HOY</p>
+                    <p class="text-muted mb-0 small fw-bold">VENTAS TOTALES (HISTÓRICO)</p>
                     <h1 id="totalGlobal" class="fw-bold text-primary m-0">S/ 0.00</h1>
                 </div>
             </div>
         </div>
         <div class="card p-4 shadow-sm">
+            <h6 class="fw-bold mb-3">Registro General de Movimientos</h6>
             <div class="table-responsive">
                 <table class="table table-hover align-middle">
                     <thead class="table-dark">
@@ -70,7 +69,7 @@
         <div class="row mb-4 align-items-center">
             <div class="col-md-4">
                 <div class="card p-3 border-start border-success border-5 shadow-sm">
-                    <p class="text-muted mb-0 small fw-bold">Caja Tienda</p>
+                    <p class="text-muted mb-0 small fw-bold">Caja Tienda (Hoy)</p>
                     <h2 id="totalCajaTienda" class="fw-bold text-success m-0">S/ 0.00</h2>
                 </div>
             </div>
@@ -84,13 +83,7 @@
                 <div class="card p-4 shadow-sm">
                     <table class="table align-middle">
                         <thead class="table-light">
-                            <tr>
-                                <th>Producto</th>
-                                <th>Precio</th>
-                                <th class="text-center">Stock (Ini/Hoy)</th>
-                                <th class="text-center">Ventas</th>
-                                <th class="text-end">Operación</th>
-                            </tr>
+                            <tr><th>Producto</th><th>Precio</th><th class="text-center">Stock (Ini/Hoy)</th><th class="text-center">Ventas</th><th class="text-end">Operación</th></tr>
                         </thead>
                         <tbody id="tablaCuerpoVenta"></tbody>
                     </table>
@@ -98,7 +91,7 @@
             </div>
             <div class="col-md-4">
                 <div class="card p-3 shadow-sm">
-                    <h6 class="fw-bold border-bottom pb-2">Historial de Ventas</h6>
+                    <h6 class="fw-bold border-bottom pb-2">Historial Reciente</h6>
                     <div id="listaHistorial"></div>
                 </div>
             </div>
@@ -108,7 +101,7 @@
 
 <script>
     const SB_URL = 'https://sycmikcciovhghzfgmrd.supabase.co'; 
-    const SB_KEY = 'IUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN5Y21pa2NjaW92aGdoemZnbXJkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2OTk2OTcsImV4cCI6MjA5MjI3NTY5N30.QLWx_ACAqXcO9IWOfD4jCKDFPpZ0srkjIdXpQYFnY2M';
+    const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN5Y21pa2NjaW92aGdoemZnbXJkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2OTk2OTcsImV4cCI6MjA5MjI3NTY5N30.QLWx_ACAqXcO9IWOfD4jCKDFPpZ0srkjIdXpQYFnY2M';
     const supabaseClient = supabase.createClient(SB_URL, SB_KEY);
 
     let tiendaActiva = "";
@@ -118,21 +111,20 @@
     document.addEventListener('DOMContentLoaded', cargarReporteGlobal);
 
     async function cargarReporteGlobal() {
-        const hoy = new Date().toISOString().split('T')[0];
-        const { data: vtas } = await supabaseClient.from('ventas_diarias').select('*, productos(nombre, tienda)').gte('fecha', hoy).order('fecha', { ascending: false });
+        // Quitamos el filtro de fecha para que veas TODO lo que hay en la BD
+        const { data: vtas, error } = await supabaseClient.from('ventas_diarias').select('*, productos(nombre, tienda)').order('fecha', { ascending: false });
+        
         const tbody = document.getElementById('cuerpoGlobal');
         tbody.innerHTML = '';
         let suma = 0;
+
         if(vtas) {
             vtas.forEach(v => {
                 suma += v.monto_total;
-                const fechaFull = new Date(v.fecha);
-                const fStr = fechaFull.toLocaleDateString();
-                const hStr = fechaFull.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                const badge = v.productos.tienda.includes('BRISAS') ? 'bg-brisas' : 'bg-orebrero';
+                const d = new Date(v.fecha);
                 tbody.innerHTML += `<tr>
-                    <td><span class="text-fecha">${fStr}</span><br><b>${hStr}</b></td>
-                    <td><span class="badge badge-tienda ${badge}">${v.productos.tienda}</span></td>
+                    <td><small>${d.toLocaleDateString()}</small><br><b>${d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</b></td>
+                    <td><span class="badge badge-tienda ${v.productos.tienda.includes('BRISAS')?'bg-brisas':'bg-orebrero'}">${v.productos.tienda}</span></td>
                     <td><small class="fw-bold text-uppercase">${v.vendedor || '---'}</small></td>
                     <td class="fw-bold">${v.productos.nombre}</td>
                     <td class="text-center">${v.cantidad}</td>
@@ -159,19 +151,19 @@
 
     async function cargarPanelTienda() {
         const { data: prods } = await supabaseClient.from('productos').select('*').eq('tienda', tiendaActiva).order('nombre');
-        const hoy = new Date().toISOString().split('T')[0];
-        const { data: vtas } = await supabaseClient.from('ventas_diarias').select('*, productos(nombre, tienda)').gte('fecha', hoy).order('fecha', { ascending: false });
+        const { data: vtas } = await supabaseClient.from('ventas_diarias').select('*, productos(nombre, tienda)').order('fecha', { ascending: false });
         
         vtasCache = vtas || [];
-        const misVentas = vtasCache.filter(v => v.productos.tienda === tiendaActiva);
+        const hoy = new Date().toISOString().split('T')[0];
+        const misVentasHoy = vtasCache.filter(v => v.productos.tienda === tiendaActiva && v.fecha.includes(hoy));
+        
         const tbody = document.getElementById('tablaCuerpoVenta');
         const histDiv = document.getElementById('listaHistorial');
-        
         tbody.innerHTML = ''; histDiv.innerHTML = '';
         let totalT = 0;
 
         prods.forEach(p => {
-            const vP = misVentas.filter(v => v.producto_id === p.id);
+            const vP = misVentasHoy.filter(v => v.producto_id === p.id);
             const cantV = vP.reduce((a, b) => a + b.cantidad, 0);
             totalT += vP.reduce((a, b) => a + b.monto_total, 0);
             tbody.innerHTML += `<tr>
@@ -186,16 +178,11 @@
             </tr>`;
         });
 
-        misVentas.slice(0,10).forEach(v => {
-            const fechaV = new Date(v.fecha);
-            const hStr = fechaV.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            const fStr = fechaV.toLocaleDateString();
+        misVentasHoy.slice(0,10).forEach(v => {
+            const h = new Date(v.fecha).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             histDiv.innerHTML += `<div class="historial-item d-flex justify-content-between align-items-center">
-                <div>
-                    <b>${v.cantidad}x</b> ${v.productos.nombre} <br>
-                    <small class="text-fecha">${fStr} - ${hStr}</small>
-                </div>
-                <button class="btn btn-link btn-sm text-danger p-0 fw-bold" onclick="anular('${v.id}','${v.producto_id}',${v.cantidad})">Anular</button>
+                <div><b>${v.cantidad}x</b> ${v.productos.nombre} <br><small class="text-muted">${h}</small></div>
+                <button class="btn btn-link btn-sm text-danger p-0" onclick="anular('${v.id}','${v.producto_id}',${v.cantidad})">Anular</button>
             </div>`;
         });
         document.getElementById('totalCajaTienda').textContent = `S/ ${totalT.toFixed(2)}`;
@@ -204,14 +191,13 @@
     async function vender(id, stock, precio) {
         const c = parseInt(document.getElementById(`in_${id}`).value);
         if (c > stock || c <= 0) return alert("Error stock");
-        const { error } = await supabaseClient.from('ventas_diarias').insert([{ producto_id: id, cantidad: c, monto_total: (precio * c), vendedor: vendedorActivo }]);
-        if (error) return alert("Error al registrar venta");
+        await supabaseClient.from('ventas_diarias').insert([{ producto_id: id, cantidad: c, monto_total: (precio * c), vendedor: vendedorActivo }]);
         await supabaseClient.from('productos').update({ stock_inicial: stock - c }).eq('id', id);
         await cargarPanelTienda();
     }
 
     async function anular(vId, pId, cant) {
-        if (!confirm("¿Seguro que deseas anular esta venta?")) return;
+        if (!confirm("¿Anular?")) return;
         await supabaseClient.from('ventas_diarias').delete().eq('id', vId);
         const { data: p } = await supabaseClient.from('productos').select('stock_inicial').eq('id', pId).single();
         await supabaseClient.from('productos').update({ stock_inicial: p.stock_inicial + cant }).eq('id', pId);
@@ -222,17 +208,15 @@
         const data = vtasCache.filter(v => v.productos.tienda === tiendaActiva).map(v => ({
             Fecha: new Date(v.fecha).toLocaleDateString(),
             Hora: new Date(v.fecha).toLocaleTimeString(),
-            Tienda: tiendaActiva,
-            Vendedor: v.vendedor || '---',
+            Vendedor: v.vendedor,
             Producto: v.productos.nombre,
             Cantidad: v.cantidad,
             Total: v.monto_total
         }));
-        if(data.length === 0) return alert("Sin ventas.");
         const ws = XLSX.utils.json_to_sheet(data);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "Reporte");
-        XLSX.writeFile(wb, `Reporte_Cierre_${tiendaActiva}.xlsx`);
+        XLSX.writeFile(wb, `Cierre_${tiendaActiva}.xlsx`);
     }
 </script>
 </body>
