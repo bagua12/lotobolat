@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LOTOBOLAT ULTRA PRO - v3.7 (Filtros Pro)</title>
+    <title>LOTOBOLAT ULTRA PRO - v3.8</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -43,9 +43,24 @@
 <div class="container">
     <div id="seccionGlobal">
         <div class="row mb-4 g-3">
-            <div class="col-md-4"><div class="card p-3 shadow-sm border-top border-primary border-5"><p class="text-muted mb-0 small fw-bold">TOTAL FILTRADO</p><h2 id="totalGlobal" class="fw-bold text-primary m-0">S/ 0.00</h2></div></div>
-            <div class="col-md-4"><div class="card p-3 shadow-sm border-top border-warning border-5"><p class="text-muted mb-0 small fw-bold">TOTAL BRISAS (HOY)</p><h2 id="totalBrisas" class="fw-bold text-warning m-0">S/ 0.00</h2></div></div>
-            <div class="col-md-4"><div class="card p-3 shadow-sm border-top border-info border-5"><p class="text-muted mb-0 small fw-bold">TOTAL OREBRERO (HOY)</p><h2 id="totalOrebrero" class="fw-bold text-info m-0">S/ 0.00</h2></div></div>
+            <div class="col-md-4">
+                <div class="card p-3 shadow-sm border-top border-primary border-5">
+                    <p class="text-muted mb-0 small fw-bold">TOTAL FILTRADO (VENTAS)</p>
+                    <h2 id="totalGlobal" class="fw-bold text-primary m-0">S/ 0.00</h2>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card p-3 shadow-sm border-top border-warning border-5">
+                    <p class="text-muted mb-0 small fw-bold">TOTAL BRISAS (HOY)</p>
+                    <h2 id="totalBrisas" class="fw-bold text-warning m-0">S/ 0.00</h2>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card p-3 shadow-sm border-top border-info border-5">
+                    <p class="text-muted mb-0 small fw-bold">TOTAL OREBRERO (HOY)</p>
+                    <h2 id="totalOrebrero" class="fw-bold text-info m-0">S/ 0.00</h2>
+                </div>
+            </div>
         </div>
 
         <div class="row mb-4 g-3">
@@ -64,16 +79,24 @@
                                 <option value="RED AT OREBRERO">OREBRERO</option>
                             </select>
                         </div>
-                        <div class="col-6"><button class="btn btn-primary fw-bold w-100 mt-2" onclick="cargarReporteGlobal()">🔍 Filtrar</button></div>
-                        <div class="col-6"><button class="btn btn-success fw-bold w-100 mt-2" onclick="descargarExcelGlobal()">📊 Excel</button></div>
-                        <div class="col-12"><button class="btn btn-outline-secondary btn-sm fw-bold w-100" onclick="resetFiltro()">📅 Ver Todo (Reset)</button></div>
+                        <div class="col-6">
+                            <button class="btn btn-primary fw-bold w-100 mt-2" onclick="cargarReporteGlobal()">🔍 Filtrar</button>
+                        </div>
+                        <div class="col-6">
+                            <button class="btn btn-success fw-bold w-100 mt-2" onclick="descargarExcelGlobal()">📊 Excel</button>
+                        </div>
+                        <div class="col-12">
+                            <button class="btn btn-outline-secondary btn-sm fw-bold w-100" onclick="resetFiltro()">📅 Ver Todo (Reset)</button>
+                        </div>
                     </div>
                 </div>
             </div>
             <div class="col-md-7">
                 <div class="card p-3 shadow-sm h-100">
-                    <h6 class="fw-bold text-center mb-2 small">🏆 Rendimiento por Vendedor</h6>
-                    <canvas id="graficoVendedores"></canvas>
+                    <h6 class="fw-bold text-center mb-2 small">🏆 Ranking de Vendedores (Soles y Cantidad)</h6>
+                    <div style="position: relative; height: 250px;">
+                        <canvas id="graficoVendedores"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
@@ -82,7 +105,14 @@
             <div class="table-responsive">
                 <table class="table table-hover align-middle">
                     <thead class="table-dark">
-                        <tr><th>Fecha / Hora</th><th>Tienda</th><th>Vendedor</th><th>Producto</th><th class="text-center">Cant.</th><th class="text-end">Total</th></tr>
+                        <tr>
+                            <th>Fecha / Hora</th>
+                            <th>Tienda</th>
+                            <th>Vendedor</th>
+                            <th>Producto</th>
+                            <th class="text-center">Cant.</th>
+                            <th class="text-end">Total</th>
+                        </tr>
                     </thead>
                     <tbody id="cuerpoGlobal"></tbody>
                 </table>
@@ -104,16 +134,31 @@
             </div>
         </div>
         <div class="row">
-            <div class="col-md-8"><div class="card p-4 shadow-sm"><table class="table align-middle"><thead class="table-light"><tr><th>Producto</th><th>Precio</th><th class="text-center">Stock</th><th class="text-center">Ventas</th><th class="text-end">Operación</th></tr></thead><tbody id="tablaCuerpoVenta"></tbody></table></div></div>
-            <div class="col-md-4"><div class="card p-3 shadow-sm"><h6 class="fw-bold border-bottom pb-2">Historial Reciente</h6><div id="listaHistorial"></div></div></div>
+            <div class="col-md-8">
+                <div class="card p-4 shadow-sm">
+                    <table class="table align-middle">
+                        <thead class="table-light">
+                            <tr><th>Producto</th><th>Precio</th><th class="text-center">Stock</th><th class="text-center">Ventas</th><th class="text-end">Operación</th></tr>
+                        </thead>
+                        <tbody id="tablaCuerpoVenta"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card p-3 shadow-sm">
+                    <h6 class="fw-bold border-bottom pb-2">Historial Reciente (Tienda)</h6>
+                    <div id="listaHistorial"></div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
 
 <script>
-   const SB_URL = 'https://sycmikcciovhghzfgmrd.supabase.co'; 
+    const SB_URL = 'https://sycmikcciovhghzfgmrd.supabase.co'; 
     const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN5Y21pa2NjaW92aGdoemZnbXJkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2OTk2OTcsImV4cCI6MjA5MjI3NTY5N30.QLWx_ACAqXcO9IWOfD4jCKDFPpZ0srkjIdXpQYFnY2M';
     const supabaseClient = supabase.createClient(SB_URL, SB_KEY);
+
 
 
     let tiendaActiva = "";
@@ -146,18 +191,19 @@
 
         vtasGlobalCache.forEach(v => {
             if (v.productos) {
-                // Cálculo de tarjetas fijas de "Hoy"
+                // Cálculo de tarjetas fijas para el día de HOY real
                 if(v.fecha.includes(hoyStr)) {
                     if(v.productos.tienda.includes('BRISAS')) sumaB_hoy += v.monto_total;
                     else sumaO_hoy += v.monto_total;
                 }
 
-                // Aplicar filtro de tienda del Dashboard
+                // Lógica de Filtro Combinado (Fecha + Tienda)
                 const coincideTienda = (tiendaFiltro === "TODAS" || v.productos.tienda === tiendaFiltro);
 
                 if (coincideTienda) {
                     sumaF += v.monto_total;
                     const vend = v.vendedor || 'Sin Nombre';
+                    
                     if(!statsVendedores[vend]) statsVendedores[vend] = { soles: 0, cantidad: 0 };
                     statsVendedores[vend].soles += v.monto_total;
                     statsVendedores[vend].cantidad += v.cantidad;
@@ -177,45 +223,79 @@
         document.getElementById('totalGlobal').textContent = `S/ ${sumaF.toFixed(2)}`;
         document.getElementById('totalBrisas').textContent = `S/ ${sumaB_hoy.toFixed(2)}`;
         document.getElementById('totalOrebrero').textContent = `S/ ${sumaO_hoy.toFixed(2)}`;
+        
         actualizarGrafico(statsVendedores);
     }
 
     function actualizarGrafico(stats) {
         const nombres = Object.keys(stats);
         const soles = nombres.map(n => stats[n].soles);
+        const cantidades = nombres.map(n => stats[n].cantidad);
+
         if (miGrafico) miGrafico.destroy();
         const ctx = document.getElementById('graficoVendedores').getContext('2d');
+        
         miGrafico = new Chart(ctx, {
             type: 'bar',
             data: {
                 labels: nombres,
-                datasets: [{ label: 'Soles (S/)', data: soles, backgroundColor: '#1e3799', borderRadius: 5 }]
+                datasets: [
+                    { 
+                        label: 'Soles (S/)', 
+                        data: soles, 
+                        backgroundColor: '#1e3799', 
+                        borderRadius: 5,
+                        yAxisID: 'y'
+                    },
+                    { 
+                        label: 'Cantidad Vendida', 
+                        data: cantidades, 
+                        backgroundColor: '#2ecc71', 
+                        borderRadius: 5,
+                        yAxisID: 'y1'
+                    }
+                ]
             },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+            options: { 
+                responsive: true, 
+                maintainAspectRatio: false, 
+                scales: { 
+                    y: { type: 'linear', position: 'left', title: { display: true, text: 'Soles (S/)' } },
+                    y1: { type: 'linear', position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'Unidades' } }
+                },
+                plugins: { legend: { position: 'bottom' } } 
+            }
         });
     }
 
     function resetFiltro() {
-        document.getElementById('inputFechaFiltro').value = "";
+        const hoy = new Date().toISOString().split('T')[0];
+        document.getElementById('inputFechaFiltro').value = hoy;
         document.getElementById('filtroTiendaDashboard').value = "TODAS";
         cargarReporteGlobal();
     }
 
     function descargarExcelGlobal() {
-        if(vtasGlobalCache.length === 0) return alert("No hay datos");
+        if(vtasGlobalCache.length === 0) return alert("No hay datos para exportar.");
         const tiendaFiltro = document.getElementById('filtroTiendaDashboard').value;
         const filtrados = vtasGlobalCache.filter(v => (tiendaFiltro === "TODAS" || v.productos.tienda === tiendaFiltro));
+        
         const data = filtrados.map(v => ({
-            Fecha: new Date(v.fecha).toLocaleDateString(), Hora: new Date(v.fecha).toLocaleTimeString(),
-            Tienda: v.productos?.tienda, Vendedor: v.vendedor, Producto: v.productos?.nombre, Cantidad: v.cantidad, Total: v.monto_total
+            Fecha: new Date(v.fecha).toLocaleDateString(), 
+            Hora: new Date(v.fecha).toLocaleTimeString(),
+            Tienda: v.productos?.tienda, 
+            Vendedor: v.vendedor, 
+            Producto: v.productos?.nombre, 
+            Cantidad: v.cantidad, 
+            Total: v.monto_total
         }));
         const ws = XLSX.utils.json_to_sheet(data);
         const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Reporte");
-        XLSX.writeFile(wb, `Reporte_Lotobolat.xlsx`);
+        XLSX.utils.book_append_sheet(wb, ws, "Reporte_Global");
+        XLSX.writeFile(wb, `Reporte_Lotobolat_${tiendaFiltro}.xlsx`);
     }
 
-    // ACCESO A TIENDAS PARA VENTA
+    // --- ACCESO A TIENDAS ---
     document.getElementById('accesoTienda').addEventListener('change', async function() {
         const t = this.value;
         const pass = prompt(`Clave para ${t}:`);
@@ -231,43 +311,4 @@
     });
 
     async function cargarPanelTienda() {
-        const { data: prods } = await supabaseClient.from('productos').select('*').eq('tienda', tiendaActiva).order('nombre');
-        const { data: vtas } = await supabaseClient.from('ventas_diarias').select('*, productos(nombre, tienda)').order('fecha', { ascending: false });
-        const hoy = new Date().toISOString().split('T')[0];
-        const misVentasHoy = vtas ? vtas.filter(v => v.productos && v.productos.tienda === tiendaActiva && v.fecha.includes(hoy)) : [];
-        const tbody = document.getElementById('tablaCuerpoVenta');
-        const histDiv = document.getElementById('listaHistorial');
-        tbody.innerHTML = ''; histDiv.innerHTML = '';
-        let totalT = 0;
-
-        prods.forEach(p => {
-            const vP = misVentasHoy.filter(v => v.producto_id === p.id);
-            const cantV = vP.reduce((a, b) => a + b.cantidad, 0);
-            totalT += vP.reduce((a, b) => a + b.monto_total, 0);
-            const claseStock = p.stock_inicial < 15 ? 'stock-bajo' : '';
-            tbody.innerHTML += `<tr><td class="fw-bold">${p.nombre}</td><td><span class="precio-tag">S/ ${p.precio_venta}</span></td><td class="text-center"><span class="stock-actual ${claseStock}">${p.stock_inicial}</span></td><td class="text-center fs-5">${cantV}</td><td class="text-end"><div class="d-flex justify-content-end gap-2"><input type="number" id="in_${p.id}" class="form-control" style="width:65px" value="1" min="1"><button class="btn btn-danger btn-sm" onclick="vender('${p.id}', ${p.stock_inicial}, ${p.precio_venta})">VENDER</button></div></td></tr>`;
-        });
-        document.getElementById('totalCajaTienda').textContent = `S/ ${totalT.toFixed(2)}`;
-    }
-
-    async function vender(id, stock, precio) {
-        const c = parseInt(document.getElementById(`in_${id}`).value);
-        if (c > stock || c <= 0) return alert("Error stock");
-        await supabaseClient.from('ventas_diarias').insert([{ producto_id: id, cantidad: c, monto_total: (precio * c), vendedor: vendedorActivo }]);
-        await supabaseClient.from('productos').update({ stock_inicial: stock - c }).eq('id', id);
-        await cargarPanelTienda();
-    }
-
-    function descargarExcelTienda() {
-        const hoy = new Date().toISOString().split('T')[0];
-        const data = vtasGlobalCache.filter(v => v.productos && v.productos.tienda === tiendaActiva && v.fecha.includes(hoy)).map(v => ({
-            Fecha: new Date(v.fecha).toLocaleDateString(), Vendedor: v.vendedor, Producto: v.productos.nombre, Cantidad: v.cantidad, Total: v.monto_total
-        }));
-        const ws = XLSX.utils.json_to_sheet(data);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Cierre");
-        XLSX.writeFile(wb, `Cierre_${tiendaActiva}.xlsx`);
-    }
-</script>
-</body>
-</html>
+        const { data: prods } = await supabaseClient.from('productos').select('*').
