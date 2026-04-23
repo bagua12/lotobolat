@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LOTOBOLAT ULTRA PRO - v3.6 (Estadísticas)</title>
+    <title>LOTOBOLAT ULTRA PRO - v3.7 (Filtros Pro)</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -21,7 +21,7 @@
         .bg-orebrero { background-color: #9b59b6; color: white; }
         .precio-tag { font-weight: bold; color: #198754; background: #e9f7ef; padding: 2px 6px; border-radius: 5px; }
         .filtro-fecha-card { background: #ffffff; border-radius: 10px; padding: 15px; border-left: 5px solid #1e3799; }
-        canvas { max-height: 300px; }
+        canvas { max-height: 280px; }
     </style>
 </head>
 <body>
@@ -31,10 +31,10 @@
         <span class="navbar-brand fw-bold fs-3" onclick="location.reload()" style="cursor:pointer">🍀 LOTOBOLAT</span>
         <div class="d-flex gap-2">
             <span id="displayVendedor" class="badge bg-light text-dark align-self-center p-2 d-none"></span>
-            <select id="filtroTienda" class="form-select w-auto fw-bold">
-                <option value="" selected disabled>Entrar a Tienda...</option>
-                <option value="RED AT BRISAS">🏪 RED AT BRISAS</option>
-                <option value="RED AT OREBRERO">🏪 RED AT OREBRERO</option>
+            <select id="accesoTienda" class="form-select w-auto fw-bold text-primary">
+                <option value="" selected disabled>Entrar a Vender...</option>
+                <option value="RED AT BRISAS">🏪 Vender en BRISAS</option>
+                <option value="RED AT OREBRERO">🏪 Vender en OREBRERO</option>
             </select>
         </div>
     </div>
@@ -43,26 +43,36 @@
 <div class="container">
     <div id="seccionGlobal">
         <div class="row mb-4 g-3">
-            <div class="col-md-4"><div class="card p-3 shadow-sm border-top border-primary border-5"><p class="text-muted mb-0 small fw-bold">TOTAL SELECCIONADO</p><h2 id="totalGlobal" class="fw-bold text-primary m-0">S/ 0.00</h2></div></div>
-            <div class="col-md-4"><div class="card p-3 shadow-sm border-top border-warning border-5"><p class="text-muted mb-0 small fw-bold">TOTAL BRISAS</p><h2 id="totalBrisas" class="fw-bold text-warning m-0">S/ 0.00</h2></div></div>
-            <div class="col-md-4"><div class="card p-3 shadow-sm border-top border-info border-5"><p class="text-muted mb-0 small fw-bold">TOTAL OREBRERO</p><h2 id="totalOrebrero" class="fw-bold text-info m-0">S/ 0.00</h2></div></div>
+            <div class="col-md-4"><div class="card p-3 shadow-sm border-top border-primary border-5"><p class="text-muted mb-0 small fw-bold">TOTAL FILTRADO</p><h2 id="totalGlobal" class="fw-bold text-primary m-0">S/ 0.00</h2></div></div>
+            <div class="col-md-4"><div class="card p-3 shadow-sm border-top border-warning border-5"><p class="text-muted mb-0 small fw-bold">TOTAL BRISAS (HOY)</p><h2 id="totalBrisas" class="fw-bold text-warning m-0">S/ 0.00</h2></div></div>
+            <div class="col-md-4"><div class="card p-3 shadow-sm border-top border-info border-5"><p class="text-muted mb-0 small fw-bold">TOTAL OREBRERO (HOY)</p><h2 id="totalOrebrero" class="fw-bold text-info m-0">S/ 0.00</h2></div></div>
         </div>
 
-        <div class="row mb-4">
-            <div class="col-md-6">
+        <div class="row mb-4 g-3">
+            <div class="col-md-5">
                 <div class="card p-3 shadow-sm h-100 filtro-fecha-card">
-                    <label class="fw-bold mb-1 small text-primary">FILTRAR POR DÍA:</label>
-                    <input type="date" id="inputFechaFiltro" class="form-control fw-bold mb-3">
                     <div class="row g-2">
-                        <div class="col-6"><button class="btn btn-primary fw-bold w-100" onclick="cargarReporteGlobal()">🔍 Filtrar</button></div>
-                        <div class="col-6"><button class="btn btn-success fw-bold w-100" onclick="descargarExcelGlobal()">📊 Excel</button></div>
-                        <div class="col-12"><button class="btn btn-outline-secondary fw-bold w-100" onclick="resetFiltro()">📅 Ver Todo</button></div>
+                        <div class="col-6">
+                            <label class="fw-bold mb-1 small text-primary">FECHA:</label>
+                            <input type="date" id="inputFechaFiltro" class="form-control fw-bold">
+                        </div>
+                        <div class="col-6">
+                            <label class="fw-bold mb-1 small text-primary">TIENDA:</label>
+                            <select id="filtroTiendaDashboard" class="form-select fw-bold">
+                                <option value="TODAS">Ver Todas</option>
+                                <option value="RED AT BRISAS">BRISAS</option>
+                                <option value="RED AT OREBRERO">OREBRERO</option>
+                            </select>
+                        </div>
+                        <div class="col-6"><button class="btn btn-primary fw-bold w-100 mt-2" onclick="cargarReporteGlobal()">🔍 Filtrar</button></div>
+                        <div class="col-6"><button class="btn btn-success fw-bold w-100 mt-2" onclick="descargarExcelGlobal()">📊 Excel</button></div>
+                        <div class="col-12"><button class="btn btn-outline-secondary btn-sm fw-bold w-100" onclick="resetFiltro()">📅 Ver Todo (Reset)</button></div>
                     </div>
                 </div>
             </div>
-            <div class="col-md-6">
+            <div class="col-md-7">
                 <div class="card p-3 shadow-sm h-100">
-                    <h6 class="fw-bold text-center mb-2">🏆 Top Vendedores (Soles vs Cantidad)</h6>
+                    <h6 class="fw-bold text-center mb-2 small">🏆 Rendimiento por Vendedor</h6>
                     <canvas id="graficoVendedores"></canvas>
                 </div>
             </div>
@@ -84,7 +94,7 @@
         <div class="row mb-4 align-items-center">
             <div class="col-md-4">
                 <div class="card p-3 border-start border-success border-5 shadow-sm">
-                    <p class="text-muted mb-0 small fw-bold">Caja Tienda (Turno)</p>
+                    <p class="text-muted mb-0 small fw-bold">Caja Tienda (Hoy)</p>
                     <h2 id="totalCajaTienda" class="fw-bold text-success m-0">S/ 0.00</h2>
                 </div>
             </div>
@@ -101,10 +111,9 @@
 </div>
 
 <script>
-    const SB_URL = 'https://sycmikcciovhghzfgmrd.supabase.co'; 
+   const SB_URL = 'https://sycmikcciovhghzfgmrd.supabase.co'; 
     const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN5Y21pa2NjaW92aGdoemZnbXJkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2OTk2OTcsImV4cCI6MjA5MjI3NTY5N30.QLWx_ACAqXcO9IWOfD4jCKDFPpZ0srkjIdXpQYFnY2M';
     const supabaseClient = supabase.createClient(SB_URL, SB_KEY);
-
 
 
     let tiendaActiva = "";
@@ -120,7 +129,10 @@
 
     async function cargarReporteGlobal() {
         const fechaFiltro = document.getElementById('inputFechaFiltro').value;
+        const tiendaFiltro = document.getElementById('filtroTiendaDashboard').value;
+        
         let query = supabaseClient.from('ventas_diarias').select('*, productos(nombre, tienda)').order('fecha', { ascending: false });
+        
         if (fechaFiltro) query = query.gte('fecha', `${fechaFiltro}T00:00:00`).lte('fecha', `${fechaFiltro}T23:59:59`);
 
         const { data: vtas } = await query;
@@ -128,91 +140,94 @@
         
         const tbody = document.getElementById('cuerpoGlobal');
         tbody.innerHTML = '';
-        let sumaG = 0, sumaB = 0, sumaO = 0;
+        let sumaF = 0, sumaB_hoy = 0, sumaO_hoy = 0;
         let statsVendedores = {};
+        const hoyStr = new Date().toISOString().split('T')[0];
 
         vtasGlobalCache.forEach(v => {
             if (v.productos) {
-                sumaG += v.monto_total;
-                if(v.productos.tienda.includes('BRISAS')) sumaB += v.monto_total; else sumaO += v.monto_total;
+                // Cálculo de tarjetas fijas de "Hoy"
+                if(v.fecha.includes(hoyStr)) {
+                    if(v.productos.tienda.includes('BRISAS')) sumaB_hoy += v.monto_total;
+                    else sumaO_hoy += v.monto_total;
+                }
 
-                // Acumular para el gráfico
-                const vend = v.vendedor || 'Sin Nombre';
-                if(!statsVendedores[vend]) statsVendedores[vend] = { soles: 0, cantidad: 0 };
-                statsVendedores[vend].soles += v.monto_total;
-                statsVendedores[vend].cantidad += v.cantidad;
+                // Aplicar filtro de tienda del Dashboard
+                const coincideTienda = (tiendaFiltro === "TODAS" || v.productos.tienda === tiendaFiltro);
 
-                const d = new Date(v.fecha);
-                tbody.innerHTML += `<tr>
-                    <td><small class="text-muted">${d.toLocaleDateString()}</small><br><b>${d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</b></td>
-                    <td><span class="badge badge-tienda ${v.productos.tienda.includes('BRISAS')?'bg-brisas':'bg-orebrero'}">${v.productos.tienda}</span></td>
-                    <td><small class="fw-bold text-uppercase">${vend}</small></td>
-                    <td class="fw-bold">${v.productos.nombre}</td>
-                    <td class="text-center">${v.cantidad}</td>
-                    <td class="text-end fw-bold">S/ ${v.monto_total.toFixed(2)}</td>
-                </tr>`;
+                if (coincideTienda) {
+                    sumaF += v.monto_total;
+                    const vend = v.vendedor || 'Sin Nombre';
+                    if(!statsVendedores[vend]) statsVendedores[vend] = { soles: 0, cantidad: 0 };
+                    statsVendedores[vend].soles += v.monto_total;
+                    statsVendedores[vend].cantidad += v.cantidad;
+
+                    const d = new Date(v.fecha);
+                    tbody.innerHTML += `<tr>
+                        <td><small class="text-muted">${d.toLocaleDateString()}</small><br><b>${d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</b></td>
+                        <td><span class="badge badge-tienda ${v.productos.tienda.includes('BRISAS')?'bg-brisas':'bg-orebrero'}">${v.productos.tienda}</span></td>
+                        <td><small class="fw-bold text-uppercase">${vend}</small></td>
+                        <td class="fw-bold">${v.productos.nombre}</td>
+                        <td class="text-center">${v.cantidad}</td>
+                        <td class="text-end fw-bold">S/ ${v.monto_total.toFixed(2)}</td>
+                    </tr>`;
+                }
             }
         });
-        document.getElementById('totalGlobal').textContent = `S/ ${sumaG.toFixed(2)}`;
-        document.getElementById('totalBrisas').textContent = `S/ ${sumaB.toFixed(2)}`;
-        document.getElementById('totalOrebrero').textContent = `S/ ${sumaO.toFixed(2)}`;
-        
+        document.getElementById('totalGlobal').textContent = `S/ ${sumaF.toFixed(2)}`;
+        document.getElementById('totalBrisas').textContent = `S/ ${sumaB_hoy.toFixed(2)}`;
+        document.getElementById('totalOrebrero').textContent = `S/ ${sumaO_hoy.toFixed(2)}`;
         actualizarGrafico(statsVendedores);
     }
 
     function actualizarGrafico(stats) {
         const nombres = Object.keys(stats);
         const soles = nombres.map(n => stats[n].soles);
-        const cantidades = nombres.map(n => stats[n].cantidad);
-
         if (miGrafico) miGrafico.destroy();
-
         const ctx = document.getElementById('graficoVendedores').getContext('2d');
         miGrafico = new Chart(ctx, {
             type: 'bar',
             data: {
                 labels: nombres,
-                datasets: [
-                    { label: 'Soles (S/)', data: soles, backgroundColor: '#1e3799', borderRadius: 5 },
-                    { label: 'Cant. Productos', data: cantidades, backgroundColor: '#2ecc71', borderRadius: 5 }
-                ]
+                datasets: [{ label: 'Soles (S/)', data: soles, backgroundColor: '#1e3799', borderRadius: 5 }]
             },
-            options: { 
-                responsive: true, 
-                maintainAspectRatio: false,
-                plugins: { legend: { position: 'bottom' } },
-                scales: { y: { beginAtZero: true } }
-            }
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
         });
+    }
+
+    function resetFiltro() {
+        document.getElementById('inputFechaFiltro').value = "";
+        document.getElementById('filtroTiendaDashboard').value = "TODAS";
+        cargarReporteGlobal();
     }
 
     function descargarExcelGlobal() {
         if(vtasGlobalCache.length === 0) return alert("No hay datos");
-        const data = vtasGlobalCache.map(v => ({
+        const tiendaFiltro = document.getElementById('filtroTiendaDashboard').value;
+        const filtrados = vtasGlobalCache.filter(v => (tiendaFiltro === "TODAS" || v.productos.tienda === tiendaFiltro));
+        const data = filtrados.map(v => ({
             Fecha: new Date(v.fecha).toLocaleDateString(), Hora: new Date(v.fecha).toLocaleTimeString(),
             Tienda: v.productos?.tienda, Vendedor: v.vendedor, Producto: v.productos?.nombre, Cantidad: v.cantidad, Total: v.monto_total
         }));
         const ws = XLSX.utils.json_to_sheet(data);
         const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Global");
-        XLSX.writeFile(wb, `Reporte_Global.xlsx`);
+        XLSX.utils.book_append_sheet(wb, ws, "Reporte");
+        XLSX.writeFile(wb, `Reporte_Lotobolat.xlsx`);
     }
 
-    function resetFiltro() { document.getElementById('inputFechaFiltro').value = ""; cargarReporteGlobal(); }
-
-    // --- FUNCIONES DE TIENDA (IGUAL A V3.5) ---
-    document.getElementById('filtroTienda').addEventListener('change', async function() {
+    // ACCESO A TIENDAS PARA VENTA
+    document.getElementById('accesoTienda').addEventListener('change', async function() {
         const t = this.value;
-        const pass = prompt(`Clave:`);
+        const pass = prompt(`Clave para ${t}:`);
         if (pass === 'brisas2024' || pass === 'orebrero2024') {
-            vendedorActivo = prompt("Nombre:") || "Vendedor";
+            vendedorActivo = prompt("Su nombre:") || "Vendedor";
             tiendaActiva = t;
             document.getElementById('seccionGlobal').classList.add('d-none');
             document.getElementById('seccionVenta').classList.remove('d-none');
             document.getElementById('displayVendedor').textContent = `👤 ${vendedorActivo}`;
             document.getElementById('displayVendedor').classList.remove('d-none');
             await cargarPanelTienda();
-        } else this.value = "";
+        } else { this.value = ""; }
     });
 
     async function cargarPanelTienda() {
@@ -230,17 +245,7 @@
             const cantV = vP.reduce((a, b) => a + b.cantidad, 0);
             totalT += vP.reduce((a, b) => a + b.monto_total, 0);
             const claseStock = p.stock_inicial < 15 ? 'stock-bajo' : '';
-            tbody.innerHTML += `<tr>
-                <td class="fw-bold">${p.nombre}</td>
-                <td><span class="precio-tag">S/ ${p.precio_venta}</span></td>
-                <td class="text-center"><span class="stock-inicial-ref">${p.stock_inicial + cantV}</span><span class="stock-actual ${claseStock}">${p.stock_inicial}</span></td>
-                <td class="text-center fs-5 text-muted">${cantV}</td>
-                <td class="text-end"><div class="d-flex justify-content-end gap-2"><input type="number" id="in_${p.id}" class="form-control" style="width:65px" value="1" min="1"><button class="btn btn-danger btn-sm fw-bold" onclick="vender('${p.id}', ${p.stock_inicial}, ${p.precio_venta})">VENDER</button></div></td>
-            </tr>`;
-        });
-        misVentasHoy.slice(0,10).forEach(v => {
-            const h = new Date(v.fecha).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            histDiv.innerHTML += `<div class="historial-item d-flex justify-content-between align-items-center"><div><b>${v.cantidad}x</b> ${v.productos.nombre} <br><small class="text-muted">${h}</small></div><button class="btn btn-link btn-sm text-danger p-0" onclick="anular('${v.id}','${v.producto_id}',${v.cantidad})">Anular</button></div>`;
+            tbody.innerHTML += `<tr><td class="fw-bold">${p.nombre}</td><td><span class="precio-tag">S/ ${p.precio_venta}</span></td><td class="text-center"><span class="stock-actual ${claseStock}">${p.stock_inicial}</span></td><td class="text-center fs-5">${cantV}</td><td class="text-end"><div class="d-flex justify-content-end gap-2"><input type="number" id="in_${p.id}" class="form-control" style="width:65px" value="1" min="1"><button class="btn btn-danger btn-sm" onclick="vender('${p.id}', ${p.stock_inicial}, ${p.precio_venta})">VENDER</button></div></td></tr>`;
         });
         document.getElementById('totalCajaTienda').textContent = `S/ ${totalT.toFixed(2)}`;
     }
@@ -253,18 +258,10 @@
         await cargarPanelTienda();
     }
 
-    async function anular(vId, pId, cant) {
-        if (!confirm("¿Anular?")) return;
-        await supabaseClient.from('ventas_diarias').delete().eq('id', vId);
-        const { data: p } = await supabaseClient.from('productos').select('stock_inicial').eq('id', pId).single();
-        await supabaseClient.from('productos').update({ stock_inicial: p.stock_inicial + cant }).eq('id', pId);
-        await cargarPanelTienda();
-    }
-
     function descargarExcelTienda() {
         const hoy = new Date().toISOString().split('T')[0];
         const data = vtasGlobalCache.filter(v => v.productos && v.productos.tienda === tiendaActiva && v.fecha.includes(hoy)).map(v => ({
-            Fecha: new Date(v.fecha).toLocaleDateString(), Hora: new Date(v.fecha).toLocaleTimeString(), Vendedor: v.vendedor, Producto: v.productos.nombre, Cantidad: v.cantidad, Total: v.monto_total
+            Fecha: new Date(v.fecha).toLocaleDateString(), Vendedor: v.vendedor, Producto: v.productos.nombre, Cantidad: v.cantidad, Total: v.monto_total
         }));
         const ws = XLSX.utils.json_to_sheet(data);
         const wb = XLSX.utils.book_new();
