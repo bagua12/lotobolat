@@ -3,10 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LOTOBOLAT ULTRA PRO - v3.5</title>
+    <title>LOTOBOLAT ULTRA PRO - v3.6 (Estadísticas)</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body { background: #f0f2f5; font-family: 'Segoe UI', sans-serif; }
         .navbar { background: #1e3799 !important; box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
@@ -20,6 +21,7 @@
         .bg-orebrero { background-color: #9b59b6; color: white; }
         .precio-tag { font-weight: bold; color: #198754; background: #e9f7ef; padding: 2px 6px; border-radius: 5px; }
         .filtro-fecha-card { background: #ffffff; border-radius: 10px; padding: 15px; border-left: 5px solid #1e3799; }
+        canvas { max-height: 300px; }
     </style>
 </head>
 <body>
@@ -41,40 +43,27 @@
 <div class="container">
     <div id="seccionGlobal">
         <div class="row mb-4 g-3">
-            <div class="col-md-4">
-                <div class="card p-3 shadow-sm border-top border-primary border-5">
-                    <p class="text-muted mb-0 small fw-bold">TOTAL SELECCIONADO</p>
-                    <h2 id="totalGlobal" class="fw-bold text-primary m-0">S/ 0.00</h2>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card p-3 shadow-sm border-top border-warning border-5">
-                    <p class="text-muted mb-0 small fw-bold">TOTAL BRISAS</p>
-                    <h2 id="totalBrisas" class="fw-bold text-warning m-0">S/ 0.00</h2>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card p-3 shadow-sm border-top border-info border-5">
-                    <p class="text-muted mb-0 small fw-bold">TOTAL OREBRERO</p>
-                    <h2 id="totalOrebrero" class="fw-bold text-info m-0">S/ 0.00</h2>
-                </div>
-            </div>
+            <div class="col-md-4"><div class="card p-3 shadow-sm border-top border-primary border-5"><p class="text-muted mb-0 small fw-bold">TOTAL SELECCIONADO</p><h2 id="totalGlobal" class="fw-bold text-primary m-0">S/ 0.00</h2></div></div>
+            <div class="col-md-4"><div class="card p-3 shadow-sm border-top border-warning border-5"><p class="text-muted mb-0 small fw-bold">TOTAL BRISAS</p><h2 id="totalBrisas" class="fw-bold text-warning m-0">S/ 0.00</h2></div></div>
+            <div class="col-md-4"><div class="card p-3 shadow-sm border-top border-info border-5"><p class="text-muted mb-0 small fw-bold">TOTAL OREBRERO</p><h2 id="totalOrebrero" class="fw-bold text-info m-0">S/ 0.00</h2></div></div>
         </div>
 
-        <div class="card p-3 mb-4 shadow-sm filtro-fecha-card">
-            <div class="row align-items-end g-2">
-                <div class="col-md-3">
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card p-3 shadow-sm h-100 filtro-fecha-card">
                     <label class="fw-bold mb-1 small text-primary">FILTRAR POR DÍA:</label>
-                    <input type="date" id="inputFechaFiltro" class="form-control fw-bold">
+                    <input type="date" id="inputFechaFiltro" class="form-control fw-bold mb-3">
+                    <div class="row g-2">
+                        <div class="col-6"><button class="btn btn-primary fw-bold w-100" onclick="cargarReporteGlobal()">🔍 Filtrar</button></div>
+                        <div class="col-6"><button class="btn btn-success fw-bold w-100" onclick="descargarExcelGlobal()">📊 Excel</button></div>
+                        <div class="col-12"><button class="btn btn-outline-secondary fw-bold w-100" onclick="resetFiltro()">📅 Ver Todo</button></div>
+                    </div>
                 </div>
-                <div class="col-md-3">
-                    <button class="btn btn-primary fw-bold w-100" onclick="cargarReporteGlobal()">🔍 Ver Ventas</button>
-                </div>
-                <div class="col-md-3">
-                    <button class="btn btn-success fw-bold w-100" onclick="descargarExcelGlobal()">📊 EXCEL GLOBAL</button>
-                </div>
-                <div class="col-md-3">
-                    <button class="btn btn-outline-secondary fw-bold w-100" onclick="resetFiltro()">📅 Ver Todo</button>
+            </div>
+            <div class="col-md-6">
+                <div class="card p-3 shadow-sm h-100">
+                    <h6 class="fw-bold text-center mb-2">🏆 Top Vendedores (Soles vs Cantidad)</h6>
+                    <canvas id="graficoVendedores"></canvas>
                 </div>
             </div>
         </div>
@@ -83,14 +72,7 @@
             <div class="table-responsive">
                 <table class="table table-hover align-middle">
                     <thead class="table-dark">
-                        <tr>
-                            <th>Fecha / Hora</th>
-                            <th>Tienda</th>
-                            <th>Vendedor</th>
-                            <th>Producto</th>
-                            <th class="text-center">Cant.</th>
-                            <th class="text-end">Total</th>
-                        </tr>
+                        <tr><th>Fecha / Hora</th><th>Tienda</th><th>Vendedor</th><th>Producto</th><th class="text-center">Cant.</th><th class="text-end">Total</th></tr>
                     </thead>
                     <tbody id="cuerpoGlobal"></tbody>
                 </table>
@@ -112,35 +94,23 @@
             </div>
         </div>
         <div class="row">
-            <div class="col-md-8">
-                <div class="card p-4 shadow-sm">
-                    <table class="table align-middle">
-                        <thead class="table-light">
-                            <tr><th>Producto</th><th>Precio</th><th class="text-center">Stock</th><th class="text-center">Ventas</th><th class="text-end">Operación</th></tr>
-                        </thead>
-                        <tbody id="tablaCuerpoVenta"></tbody>
-                    </table>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card p-3 shadow-sm">
-                    <h6 class="fw-bold border-bottom pb-2">Historial Reciente</h6>
-                    <div id="listaHistorial"></div>
-                </div>
-            </div>
+            <div class="col-md-8"><div class="card p-4 shadow-sm"><table class="table align-middle"><thead class="table-light"><tr><th>Producto</th><th>Precio</th><th class="text-center">Stock</th><th class="text-center">Ventas</th><th class="text-end">Operación</th></tr></thead><tbody id="tablaCuerpoVenta"></tbody></table></div></div>
+            <div class="col-md-4"><div class="card p-3 shadow-sm"><h6 class="fw-bold border-bottom pb-2">Historial Reciente</h6><div id="listaHistorial"></div></div></div>
         </div>
     </div>
 </div>
 
 <script>
-     const SB_URL = 'https://sycmikcciovhghzfgmrd.supabase.co'; 
+    const SB_URL = 'https://sycmikcciovhghzfgmrd.supabase.co'; 
     const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN5Y21pa2NjaW92aGdoemZnbXJkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2OTk2OTcsImV4cCI6MjA5MjI3NTY5N30.QLWx_ACAqXcO9IWOfD4jCKDFPpZ0srkjIdXpQYFnY2M';
     const supabaseClient = supabase.createClient(SB_URL, SB_KEY);
+
 
 
     let tiendaActiva = "";
     let vendedorActivo = "";
     let vtasGlobalCache = [];
+    let miGrafico = null;
 
     document.addEventListener('DOMContentLoaded', () => {
         const hoy = new Date().toISOString().split('T')[0];
@@ -151,10 +121,7 @@
     async function cargarReporteGlobal() {
         const fechaFiltro = document.getElementById('inputFechaFiltro').value;
         let query = supabaseClient.from('ventas_diarias').select('*, productos(nombre, tienda)').order('fecha', { ascending: false });
-        
-        if (fechaFiltro) {
-            query = query.gte('fecha', `${fechaFiltro}T00:00:00`).lte('fecha', `${fechaFiltro}T23:59:59`);
-        }
+        if (fechaFiltro) query = query.gte('fecha', `${fechaFiltro}T00:00:00`).lte('fecha', `${fechaFiltro}T23:59:59`);
 
         const { data: vtas } = await query;
         vtasGlobalCache = vtas || [];
@@ -162,18 +129,24 @@
         const tbody = document.getElementById('cuerpoGlobal');
         tbody.innerHTML = '';
         let sumaG = 0, sumaB = 0, sumaO = 0;
+        let statsVendedores = {};
 
         vtasGlobalCache.forEach(v => {
             if (v.productos) {
                 sumaG += v.monto_total;
-                if(v.productos.tienda.includes('BRISAS')) sumaB += v.monto_total;
-                else sumaO += v.monto_total;
+                if(v.productos.tienda.includes('BRISAS')) sumaB += v.monto_total; else sumaO += v.monto_total;
+
+                // Acumular para el gráfico
+                const vend = v.vendedor || 'Sin Nombre';
+                if(!statsVendedores[vend]) statsVendedores[vend] = { soles: 0, cantidad: 0 };
+                statsVendedores[vend].soles += v.monto_total;
+                statsVendedores[vend].cantidad += v.cantidad;
 
                 const d = new Date(v.fecha);
                 tbody.innerHTML += `<tr>
                     <td><small class="text-muted">${d.toLocaleDateString()}</small><br><b>${d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</b></td>
                     <td><span class="badge badge-tienda ${v.productos.tienda.includes('BRISAS')?'bg-brisas':'bg-orebrero'}">${v.productos.tienda}</span></td>
-                    <td><small class="fw-bold text-uppercase">${v.vendedor || '---'}</small></td>
+                    <td><small class="fw-bold text-uppercase">${vend}</small></td>
                     <td class="fw-bold">${v.productos.nombre}</td>
                     <td class="text-center">${v.cantidad}</td>
                     <td class="text-end fw-bold">S/ ${v.monto_total.toFixed(2)}</td>
@@ -183,42 +156,63 @@
         document.getElementById('totalGlobal').textContent = `S/ ${sumaG.toFixed(2)}`;
         document.getElementById('totalBrisas').textContent = `S/ ${sumaB.toFixed(2)}`;
         document.getElementById('totalOrebrero').textContent = `S/ ${sumaO.toFixed(2)}`;
+        
+        actualizarGrafico(statsVendedores);
+    }
+
+    function actualizarGrafico(stats) {
+        const nombres = Object.keys(stats);
+        const soles = nombres.map(n => stats[n].soles);
+        const cantidades = nombres.map(n => stats[n].cantidad);
+
+        if (miGrafico) miGrafico.destroy();
+
+        const ctx = document.getElementById('graficoVendedores').getContext('2d');
+        miGrafico = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: nombres,
+                datasets: [
+                    { label: 'Soles (S/)', data: soles, backgroundColor: '#1e3799', borderRadius: 5 },
+                    { label: 'Cant. Productos', data: cantidades, backgroundColor: '#2ecc71', borderRadius: 5 }
+                ]
+            },
+            options: { 
+                responsive: true, 
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom' } },
+                scales: { y: { beginAtZero: true } }
+            }
+        });
     }
 
     function descargarExcelGlobal() {
-        if(vtasGlobalCache.length === 0) return alert("No hay datos para exportar.");
+        if(vtasGlobalCache.length === 0) return alert("No hay datos");
         const data = vtasGlobalCache.map(v => ({
-            Fecha: new Date(v.fecha).toLocaleDateString(),
-            Hora: new Date(v.fecha).toLocaleTimeString(),
-            Tienda: v.productos?.tienda || 'N/A',
-            Vendedor: v.vendedor || '---',
-            Producto: v.productos?.nombre || 'N/A',
-            Cantidad: v.cantidad,
-            Total: v.monto_total
+            Fecha: new Date(v.fecha).toLocaleDateString(), Hora: new Date(v.fecha).toLocaleTimeString(),
+            Tienda: v.productos?.tienda, Vendedor: v.vendedor, Producto: v.productos?.nombre, Cantidad: v.cantidad, Total: v.monto_total
         }));
         const ws = XLSX.utils.json_to_sheet(data);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "Global");
-        XLSX.writeFile(wb, `Reporte_Global_${document.getElementById('inputFechaFiltro').value || 'Todo'}.xlsx`);
+        XLSX.writeFile(wb, `Reporte_Global.xlsx`);
     }
 
-    function resetFiltro() {
-        document.getElementById('inputFechaFiltro').value = "";
-        cargarReporteGlobal();
-    }
+    function resetFiltro() { document.getElementById('inputFechaFiltro').value = ""; cargarReporteGlobal(); }
 
+    // --- FUNCIONES DE TIENDA (IGUAL A V3.5) ---
     document.getElementById('filtroTienda').addEventListener('change', async function() {
         const t = this.value;
-        const pass = prompt(`Clave para ${t}:`);
+        const pass = prompt(`Clave:`);
         if (pass === 'brisas2024' || pass === 'orebrero2024') {
-            vendedorActivo = prompt("Su nombre:") || "Vendedor";
+            vendedorActivo = prompt("Nombre:") || "Vendedor";
             tiendaActiva = t;
             document.getElementById('seccionGlobal').classList.add('d-none');
             document.getElementById('seccionVenta').classList.remove('d-none');
             document.getElementById('displayVendedor').textContent = `👤 ${vendedorActivo}`;
             document.getElementById('displayVendedor').classList.remove('d-none');
             await cargarPanelTienda();
-        } else { this.value = ""; }
+        } else this.value = "";
     });
 
     async function cargarPanelTienda() {
@@ -253,7 +247,7 @@
 
     async function vender(id, stock, precio) {
         const c = parseInt(document.getElementById(`in_${id}`).value);
-        if (c > stock || c <= 0) return alert("Stock insuficiente");
+        if (c > stock || c <= 0) return alert("Error stock");
         await supabaseClient.from('ventas_diarias').insert([{ producto_id: id, cantidad: c, monto_total: (precio * c), vendedor: vendedorActivo }]);
         await supabaseClient.from('productos').update({ stock_inicial: stock - c }).eq('id', id);
         await cargarPanelTienda();
