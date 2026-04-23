@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LOTOBOLAT ULTRA PRO - v3.3 (Calendario)</title>
+    <title>LOTOBOLAT ULTRA PRO - v3.5</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -62,15 +62,18 @@
         </div>
 
         <div class="card p-3 mb-4 shadow-sm filtro-fecha-card">
-            <div class="row align-items-center">
-                <div class="col-md-4">
+            <div class="row align-items-end g-2">
+                <div class="col-md-3">
                     <label class="fw-bold mb-1 small text-primary">FILTRAR POR DÍA:</label>
                     <input type="date" id="inputFechaFiltro" class="form-control fw-bold">
                 </div>
-                <div class="col-md-4 pt-4">
+                <div class="col-md-3">
                     <button class="btn btn-primary fw-bold w-100" onclick="cargarReporteGlobal()">🔍 Ver Ventas</button>
                 </div>
-                <div class="col-md-4 pt-4">
+                <div class="col-md-3">
+                    <button class="btn btn-success fw-bold w-100" onclick="descargarExcelGlobal()">📊 EXCEL GLOBAL</button>
+                </div>
+                <div class="col-md-3">
                     <button class="btn btn-outline-secondary fw-bold w-100" onclick="resetFiltro()">📅 Ver Todo</button>
                 </div>
             </div>
@@ -104,7 +107,7 @@
                 </div>
             </div>
             <div class="col-md-8 text-end">
-                <button class="btn btn-success fw-bold me-2" onclick="descargarExcel()">📊 Descargar Excel</button>
+                <button class="btn btn-success fw-bold me-2" onclick="descargarExcelTienda()">📊 Excel Tienda</button>
                 <button class="btn btn-outline-secondary fw-bold" onclick="location.reload()">⬅ Salir</button>
             </div>
         </div>
@@ -134,11 +137,11 @@
     const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN5Y21pa2NjaW92aGdoemZnbXJkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2OTk2OTcsImV4cCI6MjA5MjI3NTY5N30.QLWx_ACAqXcO9IWOfD4jCKDFPpZ0srkjIdXpQYFnY2M';
     const supabaseClient = supabase.createClient(SB_URL, SB_KEY);
 
+
     let tiendaActiva = "";
     let vendedorActivo = "";
-    let vtasCache = [];
+    let vtasGlobalCache = [];
 
-    // Al iniciar, ponemos la fecha de hoy por defecto en el calendario
     document.addEventListener('DOMContentLoaded', () => {
         const hoy = new Date().toISOString().split('T')[0];
         document.getElementById('inputFechaFiltro').value = hoy;
@@ -149,38 +152,54 @@
         const fechaFiltro = document.getElementById('inputFechaFiltro').value;
         let query = supabaseClient.from('ventas_diarias').select('*, productos(nombre, tienda)').order('fecha', { ascending: false });
         
-        // Si hay una fecha seleccionada, filtramos
         if (fechaFiltro) {
             query = query.gte('fecha', `${fechaFiltro}T00:00:00`).lte('fecha', `${fechaFiltro}T23:59:59`);
         }
 
         const { data: vtas } = await query;
+        vtasGlobalCache = vtas || [];
+        
         const tbody = document.getElementById('cuerpoGlobal');
         tbody.innerHTML = '';
         let sumaG = 0, sumaB = 0, sumaO = 0;
 
-        if(vtas) {
-            vtas.forEach(v => {
-                if (v.productos) {
-                    sumaG += v.monto_total;
-                    if(v.productos.tienda.includes('BRISAS')) sumaB += v.monto_total;
-                    else sumaO += v.monto_total;
+        vtasGlobalCache.forEach(v => {
+            if (v.productos) {
+                sumaG += v.monto_total;
+                if(v.productos.tienda.includes('BRISAS')) sumaB += v.monto_total;
+                else sumaO += v.monto_total;
 
-                    const d = new Date(v.fecha);
-                    tbody.innerHTML += `<tr>
-                        <td><small class="text-muted">${d.toLocaleDateString()}</small><br><b>${d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</b></td>
-                        <td><span class="badge badge-tienda ${v.productos.tienda.includes('BRISAS')?'bg-brisas':'bg-orebrero'}">${v.productos.tienda}</span></td>
-                        <td><small class="fw-bold text-uppercase">${v.vendedor || '---'}</small></td>
-                        <td class="fw-bold">${v.productos.nombre}</td>
-                        <td class="text-center">${v.cantidad}</td>
-                        <td class="text-end fw-bold">S/ ${v.monto_total.toFixed(2)}</td>
-                    </tr>`;
-                }
-            });
-        }
+                const d = new Date(v.fecha);
+                tbody.innerHTML += `<tr>
+                    <td><small class="text-muted">${d.toLocaleDateString()}</small><br><b>${d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</b></td>
+                    <td><span class="badge badge-tienda ${v.productos.tienda.includes('BRISAS')?'bg-brisas':'bg-orebrero'}">${v.productos.tienda}</span></td>
+                    <td><small class="fw-bold text-uppercase">${v.vendedor || '---'}</small></td>
+                    <td class="fw-bold">${v.productos.nombre}</td>
+                    <td class="text-center">${v.cantidad}</td>
+                    <td class="text-end fw-bold">S/ ${v.monto_total.toFixed(2)}</td>
+                </tr>`;
+            }
+        });
         document.getElementById('totalGlobal').textContent = `S/ ${sumaG.toFixed(2)}`;
         document.getElementById('totalBrisas').textContent = `S/ ${sumaB.toFixed(2)}`;
         document.getElementById('totalOrebrero').textContent = `S/ ${sumaO.toFixed(2)}`;
+    }
+
+    function descargarExcelGlobal() {
+        if(vtasGlobalCache.length === 0) return alert("No hay datos para exportar.");
+        const data = vtasGlobalCache.map(v => ({
+            Fecha: new Date(v.fecha).toLocaleDateString(),
+            Hora: new Date(v.fecha).toLocaleTimeString(),
+            Tienda: v.productos?.tienda || 'N/A',
+            Vendedor: v.vendedor || '---',
+            Producto: v.productos?.nombre || 'N/A',
+            Cantidad: v.cantidad,
+            Total: v.monto_total
+        }));
+        const ws = XLSX.utils.json_to_sheet(data);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Global");
+        XLSX.writeFile(wb, `Reporte_Global_${document.getElementById('inputFechaFiltro').value || 'Todo'}.xlsx`);
     }
 
     function resetFiltro() {
@@ -205,11 +224,8 @@
     async function cargarPanelTienda() {
         const { data: prods } = await supabaseClient.from('productos').select('*').eq('tienda', tiendaActiva).order('nombre');
         const { data: vtas } = await supabaseClient.from('ventas_diarias').select('*, productos(nombre, tienda)').order('fecha', { ascending: false });
-        
-        vtasCache = vtas || [];
         const hoy = new Date().toISOString().split('T')[0];
-        const misVentasHoy = vtasCache.filter(v => v.productos && v.productos.tienda === tiendaActiva && v.fecha.includes(hoy));
-        
+        const misVentasHoy = vtas ? vtas.filter(v => v.productos && v.productos.tienda === tiendaActiva && v.fecha.includes(hoy)) : [];
         const tbody = document.getElementById('tablaCuerpoVenta');
         const histDiv = document.getElementById('listaHistorial');
         tbody.innerHTML = ''; histDiv.innerHTML = '';
@@ -220,28 +236,17 @@
             const cantV = vP.reduce((a, b) => a + b.cantidad, 0);
             totalT += vP.reduce((a, b) => a + b.monto_total, 0);
             const claseStock = p.stock_inicial < 15 ? 'stock-bajo' : '';
-
             tbody.innerHTML += `<tr>
                 <td class="fw-bold">${p.nombre}</td>
                 <td><span class="precio-tag">S/ ${p.precio_venta}</span></td>
-                <td class="text-center">
-                    <span class="stock-inicial-ref">${p.stock_inicial + cantV}</span>
-                    <span class="stock-actual ${claseStock}">${p.stock_inicial}</span>
-                </td>
+                <td class="text-center"><span class="stock-inicial-ref">${p.stock_inicial + cantV}</span><span class="stock-actual ${claseStock}">${p.stock_inicial}</span></td>
                 <td class="text-center fs-5 text-muted">${cantV}</td>
-                <td class="text-end"><div class="d-flex justify-content-end gap-2">
-                    <input type="number" id="in_${p.id}" class="form-control" style="width:65px" value="1" min="1">
-                    <button class="btn btn-danger btn-sm fw-bold" onclick="vender('${p.id}', ${p.stock_inicial}, ${p.precio_venta})">VENDER</button>
-                </div></td>
+                <td class="text-end"><div class="d-flex justify-content-end gap-2"><input type="number" id="in_${p.id}" class="form-control" style="width:65px" value="1" min="1"><button class="btn btn-danger btn-sm fw-bold" onclick="vender('${p.id}', ${p.stock_inicial}, ${p.precio_venta})">VENDER</button></div></td>
             </tr>`;
         });
-
         misVentasHoy.slice(0,10).forEach(v => {
             const h = new Date(v.fecha).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            histDiv.innerHTML += `<div class="historial-item d-flex justify-content-between align-items-center">
-                <div><b>${v.cantidad}x</b> ${v.productos.nombre} <br><small class="text-muted">${h}</small></div>
-                <button class="btn btn-link btn-sm text-danger p-0" onclick="anular('${v.id}','${v.producto_id}',${v.cantidad})">Anular</button>
-            </div>`;
+            histDiv.innerHTML += `<div class="historial-item d-flex justify-content-between align-items-center"><div><b>${v.cantidad}x</b> ${v.productos.nombre} <br><small class="text-muted">${h}</small></div><button class="btn btn-link btn-sm text-danger p-0" onclick="anular('${v.id}','${v.producto_id}',${v.cantidad})">Anular</button></div>`;
         });
         document.getElementById('totalCajaTienda').textContent = `S/ ${totalT.toFixed(2)}`;
     }
@@ -262,14 +267,10 @@
         await cargarPanelTienda();
     }
 
-    function descargarExcel() {
-        const data = vtasCache.filter(v => v.productos && v.productos.tienda === tiendaActiva).map(v => ({
-            Fecha: new Date(v.fecha).toLocaleDateString(),
-            Hora: new Date(v.fecha).toLocaleTimeString(),
-            Vendedor: v.vendedor,
-            Producto: v.productos.nombre,
-            Cantidad: v.cantidad,
-            Total: v.monto_total
+    function descargarExcelTienda() {
+        const hoy = new Date().toISOString().split('T')[0];
+        const data = vtasGlobalCache.filter(v => v.productos && v.productos.tienda === tiendaActiva && v.fecha.includes(hoy)).map(v => ({
+            Fecha: new Date(v.fecha).toLocaleDateString(), Hora: new Date(v.fecha).toLocaleTimeString(), Vendedor: v.vendedor, Producto: v.productos.nombre, Cantidad: v.cantidad, Total: v.monto_total
         }));
         const ws = XLSX.utils.json_to_sheet(data);
         const wb = XLSX.utils.book_new();
